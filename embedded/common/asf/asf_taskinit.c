@@ -28,6 +28,7 @@
 \*-------------------------------------------------------------------------------------------------*/
 void ASFMessagingInit( void );
 extern uint8_t GetTaskList( uint8_t **pTaskList );
+extern const uint32_t Heap_Size;
 
 #ifdef ASF_PROFILING
  extern const char C_gStackPattern[8];
@@ -88,13 +89,18 @@ AsfTaskHandle asfTaskHandleTable[NUMBER_OF_TASKS];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
+/* Define  additional heap size here (NewHeap provides area for all task stacks and any
+ * additional space needed for regular malloc must be declared as ADD_HEAP_SIZE below)
+ */
+#define ADD_HEAP_SIZE                   1024    /* In bytes */
+
 /* IMPORTANT: The total stack needed must include stack sizes of all tasks that can be created in
    a given mode. */
 #define ASF_TASK_DEF_TYPE ASF_TOTAL_STACK_NEEDED
 #include "asf_taskdeftype.h"
 const uint32_t TotalStkNeeded =
 (
-    128 /* System overhead */
+    128 + ADD_HEAP_SIZE /* System overhead + Additional Heap for application */
 #include "asf_tasks.h"
 );
 
