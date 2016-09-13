@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2015 Audience Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,7 +142,12 @@ typedef struct PortInfoTag
     fpDmaEnables_t EnableDMAChannel;
     fpInputValidate_t   ValidateInput;
     uint32_t       UartBaseAddress;
+# ifndef USE_HAL_DRIVER
     DMAChannel_t   DMAChannel;
+# else
+    DMAhandle_t    *hDMA;
+    UARThandle_t   *hUart;
+# endif
 #else
     /** Circular transmit buffer:
      *   txWriteIdx is the next slot to write to
@@ -189,6 +194,7 @@ typedef struct PktBufferTag
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 int _dprintf( uint8_t dbgLvl, const char *fmt, ...);
+extern PortInfo gDbgUartPort;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
