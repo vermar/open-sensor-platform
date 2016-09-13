@@ -464,8 +464,12 @@ typedef struct _USBH_HandleTypeDef
   void                 (* pUser )(struct _USBH_HandleTypeDef *pHandle, uint8_t id);
   
 #if (USBH_USE_OS == 1)
-  osMessageQId          os_event;   
-  osThreadId            thread; 
+# ifndef __CMSIS_RTOS
+  TaskId                os_event;
+# else
+  osMessageQId          os_event;
+  osThreadId            thread;
+# endif
 #endif  
   
 } USBH_HandleTypeDef;

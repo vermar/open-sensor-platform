@@ -78,8 +78,10 @@ static USBH_StatusTypeDef  USBH_HandleEnum    (USBH_HandleTypeDef *phost);
 static void                USBH_HandleSof     (USBH_HandleTypeDef *phost);
 static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost);
 
-#if (USBH_USE_OS == 1)  
+#if (USBH_USE_OS == 1)
+# ifdef __CMSIS_RTOS
 static void USBH_Process_OS(void const * argument);
+# endif
 #endif
 
 /**
@@ -115,20 +117,23 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
   }
   
 #if (USBH_USE_OS == 1) 
-  
+# ifndef __CMSIS_RTOS
+  phost->os_event = USBH_IF_TASK_ID; 
+# else
   /* Create USB Host Queue */
   osMessageQDef(USBH_Queue, 10, uint16_t);
   phost->os_event = osMessageCreate (osMessageQ(USBH_Queue), NULL); 
   
   /*Create USB Host Task */
-#if defined (USBH_PROCESS_STACK_SIZE)
+#  if defined (USBH_PROCESS_STACK_SIZE)
   //osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, USBH_PROCESS_STACK_SIZE);
   osThreadDef(USBH_Process_OS, USBH_PROCESS_PRIO, 1, 0);
-#else
+#  else
   osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, 8 * configMINIMAL_STACK_SIZE);
-#endif  
+#  endif  
   //phost->thread = osThreadCreate (osThread(USBH_Thread), phost);
   phost->thread = osThreadCreate (osThread(USBH_Process_OS), phost);
+# endif
 #endif  
   
   /* Initialize low level driver */
@@ -884,6 +889,7 @@ USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 
 
 #if (USBH_USE_OS == 1)  
+# ifdef __CMSIS_RTOS
 /**
   * @brief  USB Host Thread task
   * @param  pvParameters not used
@@ -903,6 +909,7 @@ static void USBH_Process_OS(void const * argument)
     }
    }
 }
+# endif
 
 /**
 * @brief  USBH_LL_NotifyURBChange 
