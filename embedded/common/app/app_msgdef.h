@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,31 +41,9 @@
 
 /* Add application message definitions here */
 
-ASF_MSG_DEF( MSG_ACC_DATA,              MsgAccelData        msgAccelData        )
-ASF_MSG_DEF( MSG_MAG_DATA,              MsgMagData          msgMagData          )
-ASF_MSG_DEF( MSG_PRESS_DATA,            MsgPressData        msgPressData        )
-ASF_MSG_DEF( MSG_GYRO_DATA,             MsgGyroData         msgGyroData         )
-ASF_MSG_DEF( MSG_QUATERNION_DATA,       MsgQuaternionData   msgQuaternionData   )
-ASF_MSG_DEF( MSG_GEO_QUATERNION_DATA,   MsgQuaternionData msgGeoQuaternionData  )
-ASF_MSG_DEF( MSG_GAME_QUATERNION_DATA,  MsgQuaternionData msgGameQuaternionData )
-ASF_MSG_DEF( MSG_CAL_EVT_NOTIFY,        MsgGeneric          msgCalEvtNotify     )
-ASF_MSG_DEF( MSG_SENSOR_DATA_RDY,       MsgSensorDataRdy    msgSensorDataRdy    )
-ASF_MSG_DEF( MSG_CD_SEGMENT_DATA,       MsgCDSegmentData    msgCDSegmentData    )
-ASF_MSG_DEF( MSG_TRIG_ALG_BG,           MsgNoData           msgTrigAlgBg        )
-ASF_MSG_DEF( MSG_CAL_ACC_DATA,          MsgAccelData        msgCalAccelData     )
-ASF_MSG_DEF( MSG_CAL_MAG_DATA,          MsgMagData          msgCalMagData       )
-ASF_MSG_DEF( MSG_CAL_GYRO_DATA,         MsgGyroData         msgCalGyroData      )
-ASF_MSG_DEF( MSG_STEP_COUNT_DATA,       MsgStepData         msgStepCountData    )
-ASF_MSG_DEF( MSG_STEP_DETECT_DATA,      MsgStepDetData      msgStepDetData      )
-ASF_MSG_DEF( MSG_SIG_MOTION_DATA,       MsgSigMotionData    msgSigMotionData    )
-ASF_MSG_DEF( MSG_ORIENTATION_DATA,      MsgOrientationData  msgOrientationData  )
-ASF_MSG_DEF( MSG_GRAVITY_DATA,          MsgGenericTriAxisData msgGravityData    )
-ASF_MSG_DEF( MSG_LINEAR_ACCELERATION_DATA, MsgGenericTriAxisData msgLinearAccelerationData )
-ASF_MSG_DEF( MSG_SENSOR_CONTROL,        MsgSensorControlData    msgSensorControlData)
-ASF_MSG_DEF( MSG_CONSOLE_CMD_RCVD,      MsgNoData           msgConsoleCmd       )
-ASF_MSG_DEF( MSG_SENSOR_ENABLE,         MsgGeneric          msgSensEnable       )
-ASF_MSG_DEF( MSG_SENSOR_DISABLE,        MsgGeneric          msgSensDisable      )
-ASF_MSG_DEF( MSG_PROCESS_CTRL_REQ,      MsgCtrlReq          msgCtrlReq          )
+/* NOTE: This file is a template and should be moved to respective project source/app folder when
+ * project specific message definitions neeed to be added.
+ */
 
 /*-------------------------------------------------------------------------------------------------*\
  |    E N D   O F   F I L E
