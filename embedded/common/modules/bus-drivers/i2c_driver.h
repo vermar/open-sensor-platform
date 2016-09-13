@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,19 +25,9 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
-#define FLAG_LAST_TRANS_OK         0x01
-#define FLAG_MAG_DATA_READY        0x02
-#define I2C_BUFFER_SIZE            15    // Set this to the largest message size that will be sent
-                                         // including address byte.
-#define I2C_ERR_OK                                          0
-#define I2C_ERR_BUSY                                        1
-#define I2C_ERR_REQ                                         2
-
-/****************************************************************************
-  Bit and byte definitions
-****************************************************************************/
-#define I2C_READ_BIT               0     // Bit position for R/W bit in "address byte".
-#define I2C_ADR_BITS               1     // Bit position for LSB of the slave address bits in the init byte.
+#define I2C_ERR_OK                              0
+#define I2C_ERR_BUSY                            1
+#define I2C_ERR_REQ                             2
 
 
 /*-------------------------------------------------------------------------------------------------*\
@@ -65,7 +55,7 @@ typedef enum _SendModeTag {
 osp_bool_t I2C_HardwareSetup( I2C_TypeDef *busId );
 void I2C_Master_Initialise( void );
 uint8_t I2C_Transceiver_Busy( void );
-uint8_t I2C_Start_Transfer( uint8_t slaveAddr, uint16_t regAddr, uint8_t *pData, uint8_t dataSize,
+uint8_t I2C_Start_Transfer( uint8_t slaveAddr, uint16_t regAddr, uint8_t *pData, uint16_t dataSize,
                             I2C_SendMode_t sendMode );
 uint8_t I2C_Get_Data_From_Transceiver( uint8_t *, uint8_t );
 void I2C_Wait_Completion( void );
