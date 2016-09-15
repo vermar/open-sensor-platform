@@ -25,4 +25,4 @@ This project was inspired by the works of Benjamin Vedder [http://vedder.se/2012
 - The Blue user key on Discovery-F4 board will skip the track currently playing.
 
 ## Limitations
-- Currently only Keil MDK toolchain is supported and due to the size of the project a fully licensed version is needed for building it. It is possible to port it to other toolchains are free but it would also require having compatible RTX libraries or using CMSIS-RTOS with FreeRTOS - something I am planning to work on in the near future.
+- Currently only Keil MDK toolchain is supported and due to the size of the project a fully licensed version is needed for building it. It is possible to port it to other toolchains that are free but it would also require having compatible RTX libraries or using CMSIS-RTOS with FreeRTOS - something I am planning to work on in the near future.
