@@ -1,0 +1,1 @@
+Version information for CMSIS-RTX can be found in INC/cmsis_os.h
