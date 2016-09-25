@@ -58,7 +58,7 @@ void HardFault_Handler(void)
     printf("!!HARD FAULT!!");
     while (1)
     {
-        __IO U32 i;
+        __IO uint32_t i;
         //Fast blink the indicator LED
         LED_On( HARD_FAULT_LED );
         for (i = 0; i < 2000000; i++);
