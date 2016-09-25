@@ -477,7 +477,7 @@ static USBH_StatusTypeDef USBH_MSC_Process(USBH_HandleTypeDef *phost)
       }
       
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
 #endif       
     }
     else
@@ -485,7 +485,7 @@ static USBH_StatusTypeDef USBH_MSC_Process(USBH_HandleTypeDef *phost)
       MSC_Handle->current_lun = 0;
     MSC_Handle->state = MSC_IDLE;
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
 #endif 
     phost->pUser(phost, HOST_USER_CLASS_ACTIVE);     
     }
@@ -548,7 +548,7 @@ static USBH_StatusTypeDef USBH_MSC_RdWrProcess(USBH_HandleTypeDef *phost, uint8_
           error = USBH_FAIL;
     }
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
 #endif   
     break;     
     
@@ -570,7 +570,7 @@ static USBH_StatusTypeDef USBH_MSC_RdWrProcess(USBH_HandleTypeDef *phost, uint8_
           error = USBH_FAIL;
     }
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
 #endif       
     break; 
   
@@ -597,7 +597,7 @@ static USBH_StatusTypeDef USBH_MSC_RdWrProcess(USBH_HandleTypeDef *phost, uint8_
           error = USBH_FAIL;
     }
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_CLASS_EVENT, 0);
 #endif       
     break;  
     

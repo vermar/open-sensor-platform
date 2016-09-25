@@ -79,7 +79,7 @@ static void                USBH_HandleSof     (USBH_HandleTypeDef *phost);
 static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost);
 
 #if (USBH_USE_OS == 1)
-# ifdef __CMSIS_RTOS
+# if 0//def __CMSIS_RTOS
 static void USBH_Process_OS(void const * argument);
 # endif
 #endif
@@ -117,7 +117,7 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
   }
   
 #if (USBH_USE_OS == 1) 
-# ifndef __CMSIS_RTOS
+# if 1 //ndef __CMSIS_RTOS
   phost->os_event = USBH_IF_TASK_ID; 
 # else
   /* Create USB Host Queue */
@@ -126,10 +126,10 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
   
   /*Create USB Host Task */
 #  if defined (USBH_PROCESS_STACK_SIZE)
-  //osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, USBH_PROCESS_STACK_SIZE);
-  osThreadDef(USBH_Process_OS, USBH_PROCESS_PRIO, 1, 0);
+  osThreadDef(USBH_Process_OS, USBH_PROCESS_PRIO, 1, USBH_PROCESS_STACK_SIZE);
+  //osThreadDef(USBH_Process_OS, USBH_PROCESS_PRIO, 1, 0);
 #  else
-  osThreadDef(USBH_Thread, USBH_Process_OS, USBH_PROCESS_PRIO, 0, 8 * configMINIMAL_STACK_SIZE);
+  osThreadDef(USBH_Process_OS, USBH_PROCESS_PRIO, 0, 8 * configMINIMAL_STACK_SIZE);
 #  endif  
   //phost->thread = osThreadCreate (osThread(USBH_Thread), phost);
   phost->thread = osThreadCreate (osThread(USBH_Process_OS), phost);
@@ -390,7 +390,7 @@ USBH_StatusTypeDef  USBH_ReEnumerate   (USBH_HandleTypeDef *phost)
   USBH_Start(phost);
       
 #if (USBH_USE_OS == 1)
-      osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
+      ASFMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
 #endif  
   return USBH_OK;  
 }
@@ -417,7 +417,7 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
       USBH_Delay(200); 
       USBH_LL_ResetPort(phost);
 #if (USBH_USE_OS == 1)
-      osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
+      ASFMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
 #endif
     }
     break;
@@ -459,7 +459,7 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
                    phost->Control.pipe_size);
     
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
 #endif    
     
     break;
@@ -494,7 +494,7 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
         phost->gState = HOST_SET_CONFIGURATION;
         
 #if (USBH_USE_OS == 1)
-        osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+        ASFMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
 #endif         
       }
     }
@@ -553,7 +553,7 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
     }
     
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
 #endif 
     break;    
     
@@ -574,7 +574,7 @@ USBH_StatusTypeDef  USBH_Process(USBH_HandleTypeDef *phost)
       USBH_ErrLog ("Invalid Class Driver.");
     
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
 #endif       
     }
     
@@ -723,7 +723,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
         phost->EnumState = ENUM_GET_PRODUCT_STRING_DESC;
         
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
 #endif          
       }
     }
@@ -732,7 +732,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
      USBH_UsrLog("Manufacturer : N/A");      
      phost->EnumState = ENUM_GET_PRODUCT_STRING_DESC; 
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
 #endif       
     }
     break;
@@ -755,7 +755,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
       USBH_UsrLog("Product : N/A");
       phost->EnumState = ENUM_GET_SERIALNUM_STRING_DESC; 
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
 #endif        
     } 
     break;
@@ -778,7 +778,7 @@ static USBH_StatusTypeDef USBH_HandleEnum (USBH_HandleTypeDef *phost)
       USBH_UsrLog("Serial Number : N/A"); 
       Status = USBH_OK;
 #if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
+    ASFMessagePut ( phost->os_event, USBH_STATE_CHANGED_EVENT, 0);
 #endif        
     }  
     break;
@@ -846,7 +846,7 @@ USBH_StatusTypeDef  USBH_LL_Connect  (USBH_HandleTypeDef *phost)
     phost->gState = HOST_DEV_ATTACHED ;
   }
 #if (USBH_USE_OS == 1)
-  osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
+  ASFMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
 #endif 
   
   return USBH_OK;
@@ -881,7 +881,7 @@ USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
   phost->gState = HOST_DEV_DISCONNECTED;
   
 #if (USBH_USE_OS == 1)
-  osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
+  ASFMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
 #endif 
   
   return USBH_OK;
@@ -889,7 +889,7 @@ USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 
 
 #if (USBH_USE_OS == 1)  
-# ifdef __CMSIS_RTOS
+# if 0//def __CMSIS_RTOS
 /**
   * @brief  USB Host Thread task
   * @param  pvParameters not used
@@ -919,7 +919,7 @@ static void USBH_Process_OS(void const * argument)
 */
 USBH_StatusTypeDef  USBH_LL_NotifyURBChange (USBH_HandleTypeDef *phost)
 {
-  osMessagePut ( phost->os_event, USBH_URB_EVENT, 0);
+  ASFMessagePut ( phost->os_event, USBH_URB_EVENT, 0);
   return USBH_OK;
 }
 #endif  

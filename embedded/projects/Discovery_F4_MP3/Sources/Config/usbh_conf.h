@@ -51,10 +51,11 @@
 /* CMSIS OS macros */   
 #if (USBH_USE_OS == 1)
 # ifndef __CMSIS_RTOS
-  #include "Common.h"
+#  include "Common.h"
 # else
+#  include "Common.h"
 # define   USBH_PROCESS_PRIO          osPriorityNormal
-# define   USBH_PROCESS_STACK_SIZE    (8 * configMINIMAL_STACK_SIZE)
+# define   USBH_PROCESS_STACK_SIZE    (8 * 128)
 # endif
 #endif  
 
@@ -96,7 +97,7 @@
 #endif
 
 /* Exported functions ------------------------------------------------------- */
-void osMessagePut( TaskId tid, uint32_t info, uint32_t timeout );
+void ASFMessagePut( TaskId tid, uint32_t info, uint32_t timeout );
 
 #endif /* __USB_CONF_H */
     
