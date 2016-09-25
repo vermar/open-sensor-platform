@@ -41,6 +41,10 @@
 #include "rt_Robin.h"
 #include "rt_HAL_CM.h"
 
+#ifdef ASF_PROFILING
+ extern U32 RTC_GetCounter( void );
+#endif
+
 /*----------------------------------------------------------------------------
  *      Global Variables
  *---------------------------------------------------------------------------*/
@@ -87,6 +91,13 @@ static void rt_init_context (P_TCB p_TCB, U8 priority, FUNCP task_body) {
   p_TCB->waits   = 0U;
   p_TCB->stack_frame = 0U;
 
+#ifdef ASF_PROFILING
+  /* >RKV< Init profiling variables */
+  p_TCB->cumulativeRunTime = 0U;
+  p_TCB->currentRunStartTime = 0U;
+  p_TCB->runCount = 0U;
+#endif
+
   if (p_TCB->priv_stack == 0U) {
     /* Allocate the memory space for the stack. */
     p_TCB->stack = rt_alloc_box (mp_stk);
@@ -99,6 +110,24 @@ static void rt_init_context (P_TCB p_TCB, U8 priority, FUNCP task_body) {
 
 void rt_switch_req (P_TCB p_new) {
   /* Switch to next task (identified by "p_new"). */
+#ifdef ASF_PROFILING
+  U32 currentRTC;
+
+  /* >RKV< Collect profiling data */
+  currentRTC = RTC_GetCounter();
+  if (os_tsk.run)
+  {
+    /* Current running task is about to be stopped - update its counters */
+    /* NOTE that (for now) this method does not separately account for ISR times. ISR times get absorbed
+       in the cumulative time of the task that was interrupted */
+    os_tsk.run->cumulativeRunTime += (currentRTC - os_tsk.run->currentRunStartTime);
+  }
+
+  /* >RKV< Set counters for the new task */
+  p_new->currentRunStartTime = currentRTC;
+  p_new->runCount++;
+#endif
+
   os_tsk.new   = p_new;
   p_new->state = RUNNING;
   DBG_TASK_SWITCH(p_new->task_id);
@@ -400,6 +429,10 @@ void rt_sys_init (FUNCP first_task, U32 prio_stksz, void *stk) {
 #endif
   os_tsk.run = &os_idle_TCB;
   os_tsk.run->state = RUNNING;
+#ifdef ASF_PROFILING
+  /* >RKV< Idle task already set to run */
+  os_tsk.run->currentRunStartTime = RTC_GetCounter();
+#endif
 
   /* Initialize ps queue */
   os_psq->first = 0U;

@@ -480,6 +480,12 @@ static void *rt_id2obj (void *id) {
 uint8_t os_initialized;                         // Kernel Initialized flag
 uint8_t os_running;                             // Kernel Running flag
 
+#ifdef ASF_PROFILING
+extern uint32_t gStackMem;
+extern uint32_t gStackSize;
+const char C_gStackPattern[8] __attribute__((aligned (4))) = "FREESTAK";
+#endif
+
 // Kernel Control Service Calls declarations
 SVC_0_1(svcKernelInitialize, osStatus, RET_osStatus)
 SVC_0_1(svcKernelStart,      osStatus, RET_osStatus)
@@ -495,11 +501,45 @@ osMessageQId svcMessageCreate (const osMessageQDef_t *queue_def, osThreadId thre
 /// Initialize the RTOS Kernel for creating objects
 osStatus svcKernelInitialize (void) {
   uint32_t ret;
+#ifdef ASF_PROFILING
+  register uint32_t *pStack = (uint32_t *)&gStackMem;
+  register uint32_t stkSize = (uint32_t)&gStackSize;
+  register uint32_t idx;
+#endif
 
   if (os_initialized == 0U) {
 
     // Init Thread Stack Memory (must be 8-byte aligned)
     if (((uint32_t)os_stack_mem & 7U) != 0U) { return osErrorNoMemory; }
+
+#ifdef ASF_PROFILING
+    /* >RKV< This is the best place to initialize stack area for idle task and user tasks with
+       known pattern that will be used to check for stack usage */
+    /* --- System Stack --- */
+    /* This call is using the same stack that we are trying to initialize so we leave the last 32 bytes */
+    for ( idx = 0; idx < ((stkSize-32)/sizeof(C_gStackPattern)); idx++)
+    {
+        *pStack++ = *((uint32_t *)C_gStackPattern);
+        *pStack++ = *((uint32_t *)(C_gStackPattern+4));
+    }
+
+    /* --- Idle Thread Stack --- */
+    pStack = (U32 *)mp_stk;
+    for ( idx = 0; idx < mp_stk_size/sizeof(C_gStackPattern); idx++)
+    {
+        *pStack++ = *((U32 *)C_gStackPattern);
+        *pStack++ = *((U32 *)(C_gStackPattern+4));
+    }
+
+    /* --- User threads (inc. main & timer) --- */
+    pStack = (U32 *)os_stack_mem;
+    for ( idx = 0; idx < os_stack_sz/sizeof(C_gStackPattern); idx++)
+    {
+        *pStack++ = *((U32 *)C_gStackPattern);
+        *pStack++ = *((U32 *)(C_gStackPattern+4));
+    }
+#endif
+
     ret = rt_init_mem(os_stack_mem, os_stack_sz);
     if (ret != 0U) { return osErrorNoMemory; }
 
@@ -633,7 +673,7 @@ uint32_t osKernelSysTick (void) {
 
 /// Set Thread Error (for Create functions which return IDs)
 static void sysThreadError (osStatus status) {
-  // To Do
+  //printf("SysThreadError; %X\r\n", status);
 }
 
 __NO_RETURN void osThreadExit (void);

@@ -50,7 +50,12 @@
 #define _declare_box(pool,size,cnt)  uint32_t pool[(((size)+3)/4)*(cnt) + 3]
 #define _declare_box8(pool,size,cnt) uint64_t pool[(((size)+7)/8)*(cnt) + 2]
 
-#define OS_TCB_SIZE     52
+/* >RKV< OS_TCB_SIZE has increased - see rt_TypeDef.h file */
+#ifdef ASF_PROFILING
+# define OS_TCB_SIZE    64
+#else
+# define OS_TCB_SIZE    52
+#endif
 #define OS_TMR_SIZE     8
 
 #if defined (__CC_ARM) && !defined (__MICROLIB)
@@ -85,11 +90,11 @@ OS_RESULT _os_mut_wait    (uint32_t p, OS_ID mutex, uint16_t timeout) __svc_indi
  *---------------------------------------------------------------------------*/
 
 #if (OS_TASKCNT == 0)
-#error "Invalid number of concurrent running threads!"
+//#error "Invalid number of concurrent running threads!"
 #endif
 
 #if (OS_PRIVCNT >= OS_TASKCNT)
-#error "Too many threads with user-provided stack size!"
+//#error "Too many threads with user-provided stack size!"
 #endif
 
 #if (OS_TIMERS != 0)
@@ -114,6 +119,10 @@ uint16_t const os_tickus_i   = OS_CLOCK/1000000;
 uint16_t const os_tickus_f   = (((uint64_t)(OS_CLOCK-1000000*(OS_CLOCK/1000000)))<<16)/1000000;
 uint32_t const os_trv        = OS_TRV;
 uint8_t  const os_flags      = OS_RUNPRIV;
+
+#ifdef ASF_PROFILING
+uint16_t const C_gIdleStkSize = OS_STKSIZE*4;
+#endif
 
 /* Export following defines to uVision debugger. */
 __USED uint32_t const CMSIS_RTOS_API_Version = osCMSIS;
@@ -251,7 +260,8 @@ __attribute__((used)) void _mutex_release (OS_ID *mutex) {
 
 /* Main Thread definition */
 extern int main (void);
-osThreadDef_t os_thread_def_main = {(os_pthread)main, osPriorityNormal, 1U, 4*OS_MAINSTKSIZE };
+extern const uint32_t INSTR_MANAGER_TASK_ID_StkSize;
+osThreadDef_t os_thread_def_main = {(os_pthread)main, osPriorityNormal, 1U, INSTR_MANAGER_TASK_ID_StkSize };
 
 
 #if defined (__CC_ARM)

@@ -76,6 +76,15 @@ typedef struct OS_TCB {
 
   /* Task entry point used for uVision debugger                              */
   FUNCP  ptask;                   /* Task entry address                      */
+
+#ifdef ASF_PROFILING
+  /* >RKV< Profiling data */
+  U32    currentRunStartTime;    /* Start time (RTC Tick) capture at the start     */
+  U32    cumulativeRunTime;      /* Cumulative time in RTC ticks                   */
+  U32    runCount;               /* Number of times this task was scheduled to run */
+  /* IMPORTANT: if adding members to the structure - update OS_TCB_SIZE define in RTX_CM_lib.h */
+#endif
+
 } *P_TCB;
 #define TCB_STACKF      37        /* 'stack_frame' offset                    */
 #define TCB_TSTACK      40        /* 'tsk_stack' offset                      */
