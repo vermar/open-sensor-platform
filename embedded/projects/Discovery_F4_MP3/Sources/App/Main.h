@@ -109,47 +109,6 @@ typedef struct RtcClockTag
     uint16_t msec;
 } RtcClock_t;
 
-#if 0
-typedef void (*fpDmaEnables_t)(void);
-typedef Bool (*fpInputValidate_t)(uint8_t);
-
-/* UART  driver data structure */
-typedef struct PortInfoTag
-{
-    uint32_t       *pBuffPool;
-#ifdef UART_DMA_ENABLE
-    void           *pHead;
-    void           *pTail;
-    fpDmaEnables_t EnableDMATxRequest;
-    fpDmaEnables_t EnableDMAxferCompleteInt;
-    fpDmaEnables_t EnableDMAChannel;
-    fpInputValidate_t   ValidateInput;
-    uint32_t       UartBaseAddress;
-    DMA_Channel_TypeDef *DMAChannel;
-#else
-    /** Circular transmit buffer:
-     *   txWriteIdx is the next slot to write to
-     *   txReadIdx  is the last slot read from
-     *   txWriteIdx == txReadIdx == buffer is full
-     *   txWriteIdx == 1 + txReadIdx == buffer is empty
-     */
-    uint8_t      txBuffer[TX_BUFFER_SIZE];
-    uint16_t     txWriteIdx;               /**< Updated by task.   */
-    uint16_t     txReadIdx;                /**< Updated by TX ISR. */
-#endif
-    /** Circular receive buffer:
-     *   rxWriteIdx is the next slot to write to
-     *   rxReadIdx  is the last slot read from
-     *   rxWriteIdx == rxReadIdx == buffer is full
-     *   rxWriteIdx == 1 + rxReadIdx == buffer is empty
-     */
-    uint8_t      rxBuffer[RX_BUFFER_SIZE];
-    uint16_t     rxWriteIdx;               /**< Updated by RX ISR. */
-    uint16_t     rxReadIdx;                /**< Updated by task.   */
-    TaskId       rcvTask;                  /**< Task waiting for receive */
-
-} PortInfo;
-#endif
 
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
