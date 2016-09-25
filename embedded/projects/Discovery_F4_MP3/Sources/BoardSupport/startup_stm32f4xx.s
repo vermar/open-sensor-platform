@@ -62,10 +62,7 @@ Stack_Top       EQU     gStackMem + gStackSize
 ;   <o>  Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
 ; </h>
 
-; NOTE: Heap setup is done via NewHeap variable defined in ASF_TaskInit.c file
-; DO NOT SETUP HEAP HERE!
-
-Heap_Size       EQU     0
+Heap_Size       EQU     0x200
 
                 AREA    HEAP, NOINIT, READWRITE, ALIGN=3
 __heap_base
@@ -435,15 +432,13 @@ FPU_IRQHandler
 
                  IMPORT  __use_two_region_memory
                  EXPORT  __user_initial_stackheap
-                 IMPORT NewHeap
-                 IMPORT TotalStkNeeded
+
 __user_initial_stackheap
 
-                 LDR     R0, =  NewHeap
-                 LDR     R5, =  TotalStkNeeded
+                 LDR     R0, =  Heap_Mem
                  LDR     R4, [R5]
                  LDR     R1, =(gStackMem + gStackSize)
-                 ADD     R2, R0, R4
+                 LDR     R2, = (Heap_Mem +  Heap_Size)
                  LDR     R3, = gStackMem
                  BX      LR
 
