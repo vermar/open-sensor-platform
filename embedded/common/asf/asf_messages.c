@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-extern const AsfTaskInitDef C_gAsfTaskInitTable[NUMBER_OF_TASKS];
+extern AsfTaskHandle asfTaskHandleTable[];
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
@@ -33,7 +33,6 @@ extern const AsfTaskInitDef C_gAsfTaskInitTable[NUMBER_OF_TASKS];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
-#define MESSAGE_BLOCK_SIZE  (sizeof(MessageBlock))
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   T Y P E   D E F I N I T I O N S
@@ -43,16 +42,17 @@ extern const AsfTaskInitDef C_gAsfTaskInitTable[NUMBER_OF_TASKS];
  |    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 /**
- * The _declare_box macro declares an array of bytes that can be used as a memory pool for fixed
+ * The osPoolDef macro declares an array of bytes that can be used as a memory pool for fixed
  * block allocation.
  */
-_declare_box( mpool, ///< this memory pool will be used to allocate the messages
-    MESSAGE_BLOCK_SIZE, /**< this is the size of the regular messages.
+osPoolDef( mpool,           // this memory pool will be used to allocate the messages
+    MAX_SYSTEM_MESSAGES,    // Max (non dprintf) messages in the system
+    MessageBlock            /* this is the union type of the regular messages.
           To avoid variable length, we allocate from this fixed size. If memory usage become issue
           we can divide the messages among various pool size that would optimize memory usage */
-    MAX_SYSTEM_MESSAGES   //< Max (non dprintf) messages in the system
     );
 
+static osPoolId _SysPoolId;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    F O R W A R D   F U N C T I O N   D E C L A R A T I O N S
@@ -64,9 +64,8 @@ _declare_box( mpool, ///< this memory pool will be used to allocate the messages
 
 /****************************************************************************************************
  * @fn      ASFDeleteMessage
- *          This function releases the buffer memory associated with the message contents. The caller
- *          must call this function after a message's contents have been read to free the memory
- *          associated with the message.
+ *          This function releases the buffer memory associated with the message contents. This is
+ *          called internally by ASFReceive message to free memory for the previous message received
  *
  * @param   pMbuf Message buffer pointer containing the message to be deleted.
  *
@@ -84,7 +83,7 @@ static void _ASFDeleteMessage ( MessageBuffer **pMbuf, char *_file, int _line )
         /* Get the block pointer */
         M_GetMsgBlockFromBuffer (pBlock, *pMbuf);
 
-        ASF_assert( _free_box( mpool, pBlock ) == 0 );
+        ASF_assert( osPoolFree( _SysPoolId, pBlock ) == osOK );
     }
 
     *pMbuf = NULLP;
@@ -103,7 +102,8 @@ static void _ASFDeleteMessage ( MessageBuffer **pMbuf, char *_file, int _line )
  ***************************************************************************************************/
 void ASFMessagingInit( void )
 {
-    _init_box( mpool, sizeof(mpool), MESSAGE_BLOCK_SIZE );
+    _SysPoolId = osPoolCreate( osPool(mpool) );
+    ASF_assert( _SysPoolId != NULL );
 }
 
 
@@ -129,7 +129,7 @@ AsfResult_t _ASFCreateMessage( MessageId msgId, uint16_t msgSize, MessageBuffer 
        created and initialized */
     ASF_assert_var( *pMbuf == NULLP, msgId, 0, 0 );
 
-    pBlock = _alloc_box(mpool);
+    pBlock = osPoolAlloc(_SysPoolId);
     if (pBlock == NULLP) return ASF_ERR_MSG_BUFF;
 
     pBlock->header.length = msgSize;
@@ -148,7 +148,6 @@ AsfResult_t _ASFCreateMessage( MessageId msgId, uint16_t msgSize, MessageBuffer 
  *
  * @param   destTask  TaskId of the destination task which will receive the message.
  * @param   pMbuf Message buffer pointer containing the message to send.
- * @param   cntxt Specify if the message is being sent from ISR or Thread context
  *
  * @return  none
  *
@@ -157,7 +156,7 @@ AsfResult_t _ASFCreateMessage( MessageId msgId, uint16_t msgSize, MessageBuffer 
 AsfResult_t _ASFSendMessage ( TaskId destTask, MessageBuffer *pMbuf, char *_file, int _line )
 {
     MessageBlock *pBlock;
-    OS_RESULT err;
+    osStatus err;
 
     /* Check for the usual - null pointers etc. */
     ASF_assert_var( pMbuf != NULLP, pMbuf->msgId, 0, 0 );
@@ -168,21 +167,13 @@ AsfResult_t _ASFSendMessage ( TaskId destTask, MessageBuffer *pMbuf, char *_file
     pBlock->header.destTask = destTask;
 
     /* Send the message without pending */
-    if ( GetContext() != CTX_ISR )
+    err = osMessagePut( asfTaskHandleTable[destTask].QId, (uint32_t)pMbuf, 0 );
+    if (err != osOK) //Mailbox is not valid or full
     {
-        err = os_mbx_send( C_gAsfTaskInitTable[destTask].queue, pMbuf, 0 );
-        if (err != OS_R_OK) //Mailbox is not valid or full
-        {
-            ASF_assert( _free_box( mpool, pBlock ) == 0 );
-            return ASF_ERR_Q_FULL;
-        }
+        ASF_assert( osPoolFree( _SysPoolId, pBlock ) == osOK );
+        return ASF_ERR_Q_FULL;
     }
-    else
-    {
-        err = isr_mbx_check( C_gAsfTaskInitTable[destTask].queue );
-        ASF_assert_var(err != 0, err, pMbuf->msgId, destTask);
-        isr_mbx_send( C_gAsfTaskInitTable[destTask].queue, pMbuf );
-    }
+
     return ASF_OK;
 }
 
@@ -204,14 +195,15 @@ AsfResult_t _ASFSendMessage ( TaskId destTask, MessageBuffer *pMbuf, char *_file
  ***************************************************************************************************/
 void _ASFReceiveMessage ( TaskId rcvTask, MessageBuffer **pMbuf, char *_file, int _line )
 {
-    OS_RESULT   err;
+    osEvent evt;
 
     /* Delete old/previous message to release its buffer */
     _ASFDeleteMessage( pMbuf, _file, _line );
 
     /* Wait for receive */
-    err = os_mbx_wait( C_gAsfTaskInitTable[rcvTask].queue, (void **)pMbuf, OS_WAIT_FOREVER );
-    ASF_assert_var(((err == OS_R_OK) || (err == OS_R_MBX)), err, 0, 0);
+    evt = osMessageGet( asfTaskHandleTable[rcvTask].QId, osWaitForever );
+    ASF_assert_var(((evt.status == osEventMessage) || (evt.status == osOK)), evt.status, 0, 0);
+    *pMbuf = evt.value.p;
 }
 
 
@@ -232,18 +224,19 @@ void _ASFReceiveMessage ( TaskId rcvTask, MessageBuffer **pMbuf, char *_file, in
  ***************************************************************************************************/
 osp_bool_t _ASFReceiveMessagePoll ( TaskId rcvTask, MessageBuffer **pMbuf, char *_file, int _line )
 {
-    OS_RESULT   err;
+    osEvent evt;
 
     /* Delete old message to release its buffer */
     _ASFDeleteMessage( pMbuf, _file, _line );
 
-    /* Wait for receive */
-    err = os_mbx_wait( C_gAsfTaskInitTable[rcvTask].queue, (void **)pMbuf, OS_WAIT_NEVER );
-    if (err == OS_R_TMO)
+    /* Try to receive without waiting */
+    evt = osMessageGet( asfTaskHandleTable[rcvTask].QId, 0 );
+    if (evt.status == osEventTimeout)
     {
         return false;
     }
-    ASF_assert_var(((err == OS_R_OK) || (err == OS_R_MBX)), err, 0, 0);
+    ASF_assert_var(((evt.status == osEventMessage) || (evt.status == osOK)), evt.status, 0, 0);
+    *pMbuf = evt.value.p;
     return true;
 }
 

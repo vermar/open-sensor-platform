@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-extern void *AsfTimerList[];
-extern U32 const os_timernum;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
@@ -33,16 +31,37 @@ extern U32 const os_timernum;
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
+#define OS_TIMER_CB_SIZE                (sizeof(uint32_t)*6) //This should match the size set aside in osTimerDef() macro
+#define TICS_TO_MSEC(t)                 ((t) * MSEC_PER_TICK)
+#define M_GetTCB_Start(p)               (void*)((uint8_t*)p + offsetof(osTimerDef_t, timer) + sizeof(void*))
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+/* Control block for managing ASF timers */
+typedef struct _LocalTimerCb
+{
+    osTimerDef_t *pOsT;
+    TimerId       TId;
+    AsfTimer     *asfT;
+    osp_bool_t    inUse;
+} LocalTimer_t;
+
+/* Define a structure to size up the Timer CB space needed */
+typedef struct _LocalTimerCbPool
+{
+    osTimerDef_t OsT;
+    uint8_t      Cb[OS_TIMER_CB_SIZE];
+} LocalTimerCbPool_t;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-/* Maintain the list of registered timer currently running */
-static AsfTimer **_pAsfTimerList = (AsfTimer**)&AsfTimerList[0];
+osPoolDef( tpool, MAX_OS_TIMERS, LocalTimerCbPool_t );
+
+static osPoolId _SysTimerPoolId;
+
+static LocalTimer_t _AsfTimers[MAX_OS_TIMERS];
 
 /*-------------------------------------------------------------------------------------------------*\
  |    F O R W A R D   F U N C T I O N   D E C L A R A T I O N S
@@ -51,56 +70,24 @@ static AsfTimer **_pAsfTimerList = (AsfTimer**)&AsfTimerList[0];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E     F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-static uint16_t AddTimerToList(AsfTimer *pTimer)
-{
-    uint16_t i;
-    const uint16_t numTimers = os_timernum & 0xFFFF;
 
-    for ( i = 0; i < numTimers; i++ )
+/****************************************************************************************************
+ * @fn      GetFreeTimerIdx
+ *          Gets the first index of a timer that is not marked as used
+ *
+ ***************************************************************************************************/
+static int32_t GetFreeTimerIdx( void )
+{
+    uint32_t i;
+
+    for (i = 0; i < MAX_OS_TIMERS; i++)
     {
-        if ( _pAsfTimerList[i] == NULL )
+        if (_AsfTimers[i].inUse == false)
         {
-            _pAsfTimerList[i] = pTimer;
             return i;
         }
     }
-
-    /* More timers created than declared in rtx_conf_cm.c */
-    ASF_assert(FALSE);
-}
-
-static AsfTimer*  GetTimerAndRemoveFromList( uint16_t info)
-{
-    const uint16_t numTimers = os_timernum & 0xFFFF;
-    AsfTimer *pTimer;
-
-    if ( info < numTimers )
-    {
-        pTimer = _pAsfTimerList[info];
-        _pAsfTimerList[info] = NULL;
-        return pTimer;
-    }
-
-    return (AsfTimer*)NULL;
-}
-
-
-static void RemoveTimerFromList(AsfTimer *pTimer)
-{
-    uint16_t i;
-    const uint16_t numTimers = os_timernum & 0xFFFF;
-
-    for ( i = 0; i < numTimers; i++ )
-    {
-        if ( _pAsfTimerList[i] == pTimer )
-        {
-            _pAsfTimerList[i] = NULL;
-        }
-        return;
-    }
-
-    /* Timer not found! */
-    ASF_assert(FALSE);
+    return -1;
 }
 
 
@@ -130,7 +117,7 @@ static void SendTimerExpiry ( AsfTimer *pTimer )
  *          Creates a new timer in the system with the given attributes.
  *
  * @param   pTimer  Pointer to timer control block containing the attributes of the timer to be
- *                  created.
+ *                  started.
  *
  * @return  none
  *
@@ -138,14 +125,18 @@ static void SendTimerExpiry ( AsfTimer *pTimer )
  ***************************************************************************************************/
 static void _TimerStart ( AsfTimer *pTimer, char *_file, int _line )
 {
-    uint16_t info;
-
+    osStatus err;
+    int32_t freeIdx = GetFreeTimerIdx();
+    ASF_assert(freeIdx >= 0);
     ASF_assert( pTimer != NULLP );
-    ASF_assert( pTimer->sysUse != TIMER_SYS_ID ); //In case we are trying to restart a running timer
-    pTimer->sysUse = TIMER_SYS_ID;
-    info = AddTimerToList(pTimer); // Add timer to list & get index
-    pTimer->timerId = os_tmr_create( pTimer->ticks, info );
-    ASF_assert( pTimer->timerId != NULL );
+    ASF_assert( pTimer->sysUse == TIMER_NOT_IN_USE ); //In case we are trying to restart a running timer
+
+    _AsfTimers[freeIdx].asfT = pTimer; //Store reference of the application timer
+    pTimer->sysUse = freeIdx;
+     _AsfTimers[freeIdx].inUse = true;
+    err = osTimerStart( _AsfTimers[freeIdx].TId, TICS_TO_MSEC(pTimer->ticks) );
+    //pTimer->timerId = os_tmr_create( pTimer->ticks, info );
+    ASF_assert( err == osOK );
 }
 
 
@@ -154,11 +145,40 @@ static void _TimerStart ( AsfTimer *pTimer, char *_file, int _line )
 \*-------------------------------------------------------------------------------------------------*/
 
 /****************************************************************************************************
+ * @fn      ASFTimerInitialize
+ *          Initializes the timer function in the system
+ *
+ * @param   none
+ *
+ * @return  none
+ *
+ ***************************************************************************************************/
+void ASFTimerInitialize( void )
+{
+    uint32_t i;
+
+    /* We will use a block pool to allocate timer control structures */
+    _SysTimerPoolId = osPoolCreate( osPool(tpool) );
+    ASF_assert( _SysTimerPoolId != NULL );
+
+    for (i = 0; i < MAX_OS_TIMERS; i++)
+    {
+        /* Create all the timers that the Application will use. They can be started later */
+        _AsfTimers[i].pOsT = osPoolAlloc( _SysTimerPoolId );
+        ASF_assert( _AsfTimers[i].pOsT != NULL );
+        _AsfTimers[i].pOsT->ptimer = ASFTimerExpiry; //All timers will use common expiry callback
+        _AsfTimers[i].pOsT->timer = M_GetTCB_Start(_AsfTimers[i].pOsT);
+        _AsfTimers[i].TId = osTimerCreate( _AsfTimers[i].pOsT, osTimerOnce, (void*)i );
+        _AsfTimers[i].inUse = false;
+    }
+}
+
+
+/****************************************************************************************************
  * @fn      ASFTimerStarted
  *          Checks if the timer has already been started
  *
- * @param   pTimer  Pointer to timer control block containing the attributes of the timer to be
- *                  created.
+ * @param   pTimer  Pointer to timer handle.
  *
  * @return  true - Timer already started; false otherwise
  *
@@ -166,7 +186,7 @@ static void _TimerStart ( AsfTimer *pTimer, char *_file, int _line )
  ***************************************************************************************************/
 osp_bool_t ASFTimerStarted ( AsfTimer *pTimer )
 {
-    return (pTimer->sysUse == TIMER_SYS_ID? true : false);
+    return (pTimer->sysUse != TIMER_NOT_IN_USE? true : false);
 }
 
 
@@ -196,23 +216,27 @@ void _ASFTimerStart( TaskId owner, uint16_t ref, uint16_t tick, AsfTimer *pTimer
  * @fn      ASFTimerExpiry
  *          Handles the timer expiry by sending message to the task that created the timer
  *
- * @param   info  pseudo pointer to timer control block of the timer that expired.
+ * @param   arg  argument set when timer was started
  *
  * @return  none
  *
  * @see     ASFKillTimer()
  ***************************************************************************************************/
-void _ASFTimerExpiry ( uint16_t info, char *_file, int _line )
+void ASFTimerExpiry ( void const *arg )
 {
+    OS_SETUP_CRITICAL();
     AsfTimer *pTimer;
-    int wasMasked = __disable_irq();
-    pTimer = GetTimerAndRemoveFromList(info);
-
+    uint32_t idx = (uint32_t)arg;
+    pTimer = _AsfTimers[idx].asfT;
     //Look for our magic number to be sure we got the right pointer
-    ASF_assert_var( pTimer->sysUse == TIMER_SYS_ID,  pTimer->ticks, pTimer->userValue, pTimer->owner);
-    pTimer->sysUse = (uint32_t)-1; //Timer no longer in use
+    ASF_assert_var( pTimer->sysUse != TIMER_NOT_IN_USE,  pTimer->ticks, pTimer->userValue, pTimer->owner);
+
+    OS_ENTER_CRITICAL();
+    pTimer->sysUse = TIMER_NOT_IN_USE; //Timer no longer in use
+    _AsfTimers[idx].inUse = false;
+    OS_LEAVE_CRITICAL();
+    /* Note: osMessagePut uses SVC call so the following is outside of critical section */
     SendTimerExpiry( pTimer );
-    if (!wasMasked) __enable_irq();
 }
 
 
@@ -229,12 +253,18 @@ void _ASFTimerExpiry ( uint16_t info, char *_file, int _line )
  ***************************************************************************************************/
 void _ASFKillTimer ( AsfTimer *pTimer, char *_file, int _line )
 {
-    TimerId ret;
+    OS_SETUP_CRITICAL();
+    TimerId tId;
+    osStatus err;
     ASF_assert( pTimer != NULLP );
-    ret = os_tmr_kill( pTimer->timerId );
-    ASF_assert( ret == NULL );
-    pTimer->sysUse = (uint32_t)-1; //Timer no longer in use
-    RemoveTimerFromList( pTimer );
+
+    tId = _AsfTimers[pTimer->sysUse].TId;
+    err = osTimerStop( tId );
+    ASF_assert( err == osOK );
+    OS_ENTER_CRITICAL();
+    pTimer->sysUse = TIMER_NOT_IN_USE; //Timer no longer in use
+    _AsfTimers[pTimer->sysUse].inUse = false;
+    OS_LEAVE_CRITICAL();
 }
 
 

@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,13 +37,10 @@
  */
 typedef struct AsfTaskInitDefTag
 {
+    osThreadDef_t tDef;
     TaskId      taskId;
-    void        (*entryPoint)();
     char        *tskName;
-    OS_ID       queue;
-    uint16_t    queueSize;
-    uint16_t    stackSize;
-    uint8_t     priority;
+    osMessageQDef_t queue;
     char        *tidString; /* String equivalent of the TASK_ID enum */
 
 } AsfTaskInitDef;

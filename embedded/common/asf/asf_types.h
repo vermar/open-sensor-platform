@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
  |    I N C L U D E   F I L E S
 \*-------------------------------------------------------------------------------------------------*/
 #include <stdint.h>
-#include "rtl.h"
+#include "cmsis_os.h"
 
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
@@ -35,20 +35,19 @@
  * Task Handle type. This type is OS-dependent.
  */
 typedef struct AsfTaskHandleTag {
-    OS_TID   handle;
-    void     *pStack;
-    uint16_t stkSize;
+    osThreadId handle;
+    osMessageQId QId;
 } AsfTaskHandle;
 
 /*
  * Semaphore ID type. This type is OS-dependent.
  */
-typedef OS_SEM* AsfSemIdType;
+typedef osMutexId AsfSemIdType;
 
 /*
  * Timer ID type. This type is OS-dependent.
  */
-typedef OS_ID TimerId;
+typedef osTimerId TimerId;
 
 
 /*-------------------------------------------------------------------------------------------------*\

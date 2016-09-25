@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,11 +50,12 @@
 **
 */
 /* Declare all ASF tasks here */
-/* This task creates other tasks and OS resources and must always be present */
-ASF_TASK_STATIC ( INSTR_MANAGER_TASK_ID,  InstrManagerTask,   50,  0x400,    4 )
+/* InstrManagerTask creates other tasks and OS resources and must always be first task declared */
+/* Note that InstrManagerTask is same as 'main' task in CMSIS-RTOS implementation */
+ASF_TASK_STATIC ( INSTR_MANAGER_TASK_ID,  InstrManagerTask,   osPriorityIdle,  0x400,    4 )
 
 /* Handles command input from UART */
-ASF_TASK_STATIC ( CMD_HNDLR_TASK_ID,      CmdHandlerTask,     92,  0x400,    4 )
+ASF_TASK_STATIC ( CMD_HNDLR_TASK_ID,      CmdHandlerTask,     osPriorityLow,   0x400,    4 )
 
 /* Additional tasks specific to application is defined in App_Tasks.h */
 #include "app_tasks.h"

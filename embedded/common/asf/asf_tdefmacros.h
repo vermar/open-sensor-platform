@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,17 +48,17 @@
 
 #if ASF_TASK_DEF_TYPE == ASF_QUEUE_SETUP
 # define ASF_TASK_STATIC( ThreadId, EntryFunction, Priority, StackSize, QueueSize )           \
-    os_mbx_declare( Q_##ThreadId, QueueSize );
+    uint32_t Q_##ThreadId[ 4 + QueueSize ] = {0};
 #endif
 
 #if ASF_TASK_DEF_TYPE == ASF_TASK_DECLARE
-# define ASF_TASK_STATIC( ThreadId, EntryFunction, Priority, StackSize, QueueSize )             \
-       extern void EntryFunction(void);
+# define ASF_TASK_STATIC( ThreadId, EntryFunction, Priority, StackSize, QueueSize )           \
+    extern void EntryFunction(void const *argument);
 #endif
 
 #if ASF_TASK_DEF_TYPE == ASF_TASK_SETUP
-# define ASF_TASK_STATIC( ThreadId, EntryFunction, Priority, StackSize, QueueSize )             \
-        { ThreadId, EntryFunction, #EntryFunction, Q_##ThreadId, sizeof(Q_##ThreadId), StackSize, Priority, #ThreadId },
+# define ASF_TASK_STATIC( ThreadId, EntryFunction, Priority, StackSize, QueueSize )           \
+    { {EntryFunction, Priority, 1, StackSize}, ThreadId, #EntryFunction, {QueueSize, Q_##ThreadId}, #ThreadId },
 #endif
 
 #if ASF_TASK_DEF_TYPE == ASF_TOTAL_STACK_NEEDED
