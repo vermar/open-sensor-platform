@@ -33,7 +33,8 @@
 \*-------------------------------------------------------------------------------------------------*/
 #define OS_WAIT_NEVER                           0x00    ///< Zero wait as defined by RTX
 #define OS_WAIT_FOREVER                         0xFFFF  ///< Wait forever as defined by RTX
-#define TIMER_SYS_ID                            0xC0DEFEEDUL
+#define TIMER_NOT_IN_USE                        0xFFFFC0DE
+#define MAX_OS_TIMERS                           4
 
 /* Critical Section Locks */
 #define OS_SETUP_CRITICAL()                     int wasMasked
@@ -108,14 +109,18 @@
 
 #define ASFKillTimer( ptim )         \
     _ASFKillTimer( ptim, __MODULE__, __LINE__ )
-#define ASFTimerExpiry( info )       \
-    _ASFTimerExpiry( info, __MODULE__, __LINE__ )
 #define ASFTimerStart( owner, ref, tick, pTimer )  \
     _ASFTimerStart( owner, ref, tick, pTimer, __MODULE__, __LINE__ )
 
 /*-------------------------------------------------------------------------------------------------*\
  |    T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+typedef enum AppResultCodesTag
+{
+    APP_OK      = 0,
+    APP_ERR     = 1
+} AppResult;
+
 typedef struct AsfTimerTag
 {
     TimerId         timerId;   /**< Id of the timer - internal use    */
@@ -125,7 +130,7 @@ typedef struct AsfTimerTag
     uint32_t        sysUse;    /**< For use by the system             */
 } AsfTimer;
 
-#define NULL_TIMER {(TimerId)0, (TaskId)0, 0, 0, 0}
+#define NULL_TIMER {(TimerId)0, (TaskId)0, 0, 0, TIMER_NOT_IN_USE}
 
 typedef void (*fpDmaEnables_t)(void);
 typedef osp_bool_t (*fpInputValidate_t)(uint8_t);
@@ -133,7 +138,7 @@ typedef osp_bool_t (*fpInputValidate_t)(uint8_t);
 /* UART  driver data structure */
 typedef struct PortInfoTag
 {
-    uint32_t       *pBuffPool;
+    osPoolId       pBuffPool;
 #ifdef UART_DMA_ENABLE
     void           *pHead;
     void           *pTail;
@@ -213,11 +218,11 @@ extern PortInfo gDbgUartPort;
 #define D1_printf( format, ... )        _dprintf( 1, format, ## __VA_ARGS__ )
 #define D2_printf( format, ... )        _dprintf( 2, format, ## __VA_ARGS__ )
 
-
+void ASFTimerInitialize( void );
 void _ASFTimerStart( TaskId owner, uint16_t ref, uint16_t tick, AsfTimer *pTimer, char *_file, int _line  );
 osp_bool_t ASFTimerStarted ( AsfTimer *pTimer );
 void _ASFKillTimer( AsfTimer *pTimer, char *_file, int _line );
-void _ASFTimerExpiry ( uint16_t info, char *_file, int _line );
+void ASFTimerExpiry ( void const *arg );
 void AsfInitialiseTasks ( void );
 
 /* User instrumentation hooks */

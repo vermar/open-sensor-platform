@@ -24,11 +24,7 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-#ifdef ASF_PROFILING
-  extern uint32_t gStackMem;
-  extern uint32_t gStackSize;
-  extern const char C_gStackPattern[8];
-#endif
+ASF_TASK void InstrManagerTask( ASF_TASK_ARG );
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
@@ -63,27 +59,40 @@
 
 /****************************************************************************************************
  * @fn      main
- *          Main entry point to the application firmware
+ *          In CMSIS-RTOS framework, main() is the first application thread that is created by the
+ *          kernel's internal initialization along side Timer thread (if enabled). This thread has
+ *          the responsibility of spawning other system threads and system initialization. In ASF,
+ *          this was being done in Instrumentation Manager Task so we just call the entry function
+ *          for Instrumentation Manager here.
+ *
+ * @param   none
+ *
+ * @return  0 always.
+ *
+ ***************************************************************************************************/
+int main( void )
+{
+    InstrManagerTask( NULL );
+
+    /* we don't expect to return but just to shut up the compiler... */
+    return 0;
+}
+
+
+/****************************************************************************************************
+ * @fn      PlatformInitialize
+ *          This was done originally in main() (non-CMSIS scheme). Now its the first function called
+ *          by the Instrumentation Manager task to initialize platform specific hardware and debug
+ *          interfaces. Note that some clock setup is already done at this point via the SystemInit()
+ *          call made from the startup file.
  *
  * @param   none
  *
  * @return  none
  *
  ***************************************************************************************************/
-int main( void )
+void PlatformInitialize( void )
 {
-#ifdef ASF_PROFILING
-    register uint32_t *pStack = (uint32_t *)&gStackMem;
-    register uint32_t stkSize = (uint32_t)&gStackSize;
-    register uint32_t idx;
-
-    /* main() is using the same stack that we are trying to initialize so we leave the last 32 bytes */
-    for ( idx = 0; idx < ((stkSize-32)/sizeof(C_gStackPattern)); idx++)
-    {
-        *pStack++ = *((uint32_t *)C_gStackPattern);
-        *pStack++ = *((uint32_t *)(C_gStackPattern+4));
-    }
-#endif
     /* STM32F4xx HAL library initialization:
        - Configure the Flash prefetch, instruction and Data caches
        - Configure the Systick to generate an interrupt each 1 msec
@@ -130,12 +139,6 @@ int main( void )
         gDevUniqueId->uidBytes[8], gDevUniqueId->uidBytes[7], gDevUniqueId->uidBytes[6],
         gDevUniqueId->uidBytes[5], gDevUniqueId->uidBytes[4], gDevUniqueId->uidBytes[3],
         gDevUniqueId->uidBytes[2], gDevUniqueId->uidBytes[1], gDevUniqueId->uidBytes[0]);
-
-    /* Get the OS going - This must be the last call */
-    AsfInitialiseTasks();
-
-    /* If it got here something bad happened */
-    ASF_assert_fatal(false);
 }
 
 

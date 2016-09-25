@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,12 +40,6 @@ extern void CmdParse_User( int8_t *pBuffer, uint16_t size );
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-enum _ResultCodes
-{
-    APP_OK      = 0,
-    APP_ERR     = 1
-};
-
 
 /*-------------------------------------------------------------------------------------------------*\
  |    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
@@ -81,6 +75,7 @@ static uint8_t SerialRead( PortInfo *pPort, int8_t *pBuff, uint16_t length, uint
     uint16_t bytesRead = 0;
     uint8_t  retVal = APP_OK;
     uint16_t evtFlags = 0;
+    osEvent  ret;
 
     if ((pBuff == NULL) || (length == 0) || (length > RX_BUFFER_SIZE))
     {
@@ -93,9 +88,13 @@ static uint8_t SerialRead( PortInfo *pPort, int8_t *pBuff, uint16_t length, uint
         if (pPort->rxWriteIdx ==
             ((pPort->rxReadIdx + 1) % RX_BUFFER_SIZE))
         {
-            /* Wait here for ISR event */
-            os_evt_wait_or( UART_CMD_RECEIVE | UART_CRLF_RECEIVE, EVT_WAIT_FOREVER );
-            evtFlags = os_evt_get();
+            /* Wait here for any ISR event */
+            evtFlags = 0;
+            ret = osSignalWait( 0, osWaitForever ); //0 => Any signal will resume thread
+            if (ret.status == osEventSignal)
+            {
+                evtFlags = ret.value.signals;
+            }
         }
         else
         {

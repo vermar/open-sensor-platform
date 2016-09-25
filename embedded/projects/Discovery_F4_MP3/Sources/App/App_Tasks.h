@@ -52,8 +52,8 @@
 /* Declare additional application specific tasks here */
 /* NOTE: STACK_INCREASE can be used to increase the stack size of all tasks by a constant amount.
    This value is set in ASF_TaskInit.c file and is normally 0. Use this for Debugging crashes */
-ASF_TASK_STATIC (USBH_IF_TASK_ID,       UsbHostTask,        91,  (0x500+STACK_INCREASE),  4)
-ASF_TASK_STATIC (MP3_APP_TASK_ID,       Mp3PlayerTask,      92,  (0xD00+STACK_INCREASE),  16)
+ASF_TASK_STATIC (USBH_IF_TASK_ID,       UsbHostTask,        osPriorityNormal,  (0x500+STACK_INCREASE),  4)
+ASF_TASK_STATIC (MP3_APP_TASK_ID,       Mp3PlayerTask,      osPriorityRealtime,  (0xD00+STACK_INCREASE),  16)
 
 
 

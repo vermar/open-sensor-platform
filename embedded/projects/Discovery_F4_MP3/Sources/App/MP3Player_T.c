@@ -445,8 +445,8 @@ int Mp3Decode(const char* pszFile)
     uint32_t unDmaBufMode = 0;
     g_pMp3DmaBufferPtr = g_pMp3DmaBuffer;
     UINT bCodecInitialized = FALSE;
-    OS_RESULT result;
-    uint16_t evFlags;
+    uint16_t evtFlags;
+    osEvent  ret;
     int nDecodeRes = ERR_MP3_NONE;
     UINT unFramesDecoded = 0;
 
@@ -578,11 +578,17 @@ int Mp3Decode(const char* pszFile)
                         }
 
                         // we must wait for the DMA stream tx interrupt here
-                        result = os_evt_wait_or( DMA_EVT_HALF_TRANSFER | DMA_EVT_FULL_TRANSFER | APP_EVT_STOP_REQUEST, OS_WAIT_FOREVER );
-                        ASF_assert( result == OS_R_EVT );
-                        evFlags = os_evt_get();
+                        //result = os_evt_wait_or( DMA_EVT_HALF_TRANSFER | DMA_EVT_FULL_TRANSFER | APP_EVT_STOP_REQUEST, OS_WAIT_FOREVER );
+                        //ASF_assert( result == OS_R_EVT );
+                        //evFlags = os_evt_get();
+                        evtFlags = 0;
+                        ret = osSignalWait( 0, osWaitForever ); //0 => Any signal will resume thread
+                        if (ret.status == osEventSignal)
+                        {
+                            evtFlags = ret.value.signals;
+                        }
 
-                        if((evFlags & APP_EVT_STOP_REQUEST) || BUTTON)
+                        if((evtFlags & APP_EVT_STOP_REQUEST) || BUTTON)
                         {
                             // stop requested
                             D1_printf("Mp3Decode: Stop requested\r\n");
@@ -590,7 +596,7 @@ int Mp3Decode(const char* pszFile)
                             break;
                         }
 
-                        if((evFlags & DMA_EVT_HALF_TRANSFER) && (evFlags & DMA_EVT_FULL_TRANSFER))
+                        if((evtFlags & DMA_EVT_HALF_TRANSFER) && (evtFlags & DMA_EVT_FULL_TRANSFER))
                         {
                             D1_printf("Mp3Decode: DMA out of sync (HT and TC both set)\r\n");
                             nResult = -3;
@@ -600,7 +606,7 @@ int Mp3Decode(const char* pszFile)
                         if(unDmaBufMode == 0 || unDmaBufMode == 2)
                         {
                             // the DMA event we expect is "half transfer" (=2)
-                            if(evFlags & DMA_EVT_HALF_TRANSFER)
+                            if(evtFlags & DMA_EVT_HALF_TRANSFER)
                             {
                                 // set up first half mode
                                 unDmaBufMode = 1;
@@ -616,7 +622,7 @@ int Mp3Decode(const char* pszFile)
                         else
                         {
                             // the DMA event we expect is "transfer complete" (=4)
-                            if(evFlags & DMA_EVT_FULL_TRANSFER)
+                            if(evtFlags & DMA_EVT_FULL_TRANSFER)
                             {
                                 // set up last half mode
                                 unDmaBufMode = 2;
@@ -676,13 +682,14 @@ int Mp3Decode(const char* pszFile)
     }
 
     /* Get rid of any pending flags that might have been posted from ISR */
-    result = os_evt_wait_or( DMA_EVT_HALF_TRANSFER | DMA_EVT_FULL_TRANSFER | APP_EVT_STOP_REQUEST, MSEC_TO_TICS(50) );
+    ret = osSignalWait( 0, 50 ); //0 => Any signal will resume thread
+    //result = os_evt_wait_or( DMA_EVT_HALF_TRANSFER | DMA_EVT_FULL_TRANSFER | APP_EVT_STOP_REQUEST, MSEC_TO_TICS(50) );
     //D1_printf("EVT-WAIT result = %d\r\n", result);
-    if ( result == OS_R_EVT )
-    {
-        evFlags = os_evt_get();
+    //if ( result == OS_R_EVT )
+    //{
+    //    evFlags = os_evt_get();
         //D1_printf("EVT-GET result = %04X\r\n", evFlags);
-    }
+    //}
 
     return nResult;
 }
@@ -763,7 +770,8 @@ static void Mp3Play( void )
   */
 void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
 {
-    isr_evt_set(DMA_EVT_FULL_TRANSFER, asfTaskHandleTable[MP3_APP_TASK_ID].handle );
+    osSignalSet( asfTaskHandleTable[MP3_APP_TASK_ID].handle, DMA_EVT_FULL_TRANSFER );
+    //isr_evt_set(DMA_EVT_FULL_TRANSFER, asfTaskHandleTable[MP3_APP_TASK_ID].handle );
 }
 
 /**
@@ -773,7 +781,8 @@ void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
   */
 void BSP_AUDIO_OUT_HalfTransfer_CallBack(void)
 {
-    isr_evt_set(DMA_EVT_HALF_TRANSFER, asfTaskHandleTable[MP3_APP_TASK_ID].handle );
+    osSignalSet( asfTaskHandleTable[MP3_APP_TASK_ID].handle, DMA_EVT_HALF_TRANSFER );
+    //isr_evt_set(DMA_EVT_HALF_TRANSFER, asfTaskHandleTable[MP3_APP_TASK_ID].handle );
 }
 
 /****************************************************************************************************
@@ -781,17 +790,20 @@ void BSP_AUDIO_OUT_HalfTransfer_CallBack(void)
  *          Sends events to the USB Host task. Called by USB Stack sources
  *
  ***************************************************************************************************/
-void osMessagePut( TaskId tid, uint32_t info, uint32_t timeout )
+#if 1//ndef __CMSIS_RTOS
+void ASFMessagePut( TaskId tid, uint32_t info, uint32_t timeout )
 {
-    if (GetContext() == CTX_ISR)
-    {
-        isr_evt_set(info, asfTaskHandleTable[tid].handle );
-    }
-    else
-    {
-        os_evt_set(info, asfTaskHandleTable[tid].handle );
-    }
+    osSignalSet( asfTaskHandleTable[tid].handle, info );
+//    if (GetContext() == CTX_ISR)
+//    {
+//        isr_evt_set(info, asfTaskHandleTable[tid].handle );
+//    }
+//    else
+//    {
+//        os_evt_set(info, asfTaskHandleTable[tid].handle );
+//    }
 }
+#endif
 
 /****************************************************************************************************
  * @fn      Mp3PlayerTask
@@ -853,7 +865,7 @@ ASF_TASK void Mp3PlayerTask( ASF_TASK_ARG )
     }
 }
 
-
+#if 1//ndef __CMSIS_RTOS
 /****************************************************************************************************
  * @fn      UsbHostTask
  *          This task handles USB Host (OTG) stack.
@@ -866,31 +878,28 @@ ASF_TASK void Mp3PlayerTask( ASF_TASK_ARG )
 ASF_TASK void UsbHostTask( ASF_TASK_ARG )
 {
     //MessageBuffer *rcvMsg = NULLP;
-    OS_RESULT result;
+    //OS_RESULT result;
     uint16_t flags;
+    osEvent  ret;
 
     D1_printf(":: USB HOST IF Task Ready ::\r\n");
 
     while(1)
     {
-#if 0
-        ASFReceiveMessage( USBH_IF_TASK_ID, &rcvMsg );
-
-        switch (rcvMsg->msgId)
+        flags = 0;
+        ret = osSignalWait( 0, osWaitForever ); //0 => Any signal will resume thread
+        if (ret.status == osEventSignal)
         {
-        default:
-            USBH_Process( &hUSB_Host );
-            break;
+            flags = ret.value.signals;
         }
-#else
-        result = os_evt_wait_or( 0x00FF, OS_WAIT_FOREVER );
-        ASF_assert( result == OS_R_EVT );
-        flags = os_evt_get();
+//        result = os_evt_wait_or( 0x00FF, OS_WAIT_FOREVER );
+//        ASF_assert( result == OS_R_EVT );
+//        flags = os_evt_get();
         USBH_Process( &hUSB_Host );
         (void)flags;
-#endif
     }
 }
+#endif
 
 
 /*-------------------------------------------------------------------------------------------------*\

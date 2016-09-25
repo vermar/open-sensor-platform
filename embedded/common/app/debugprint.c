@@ -1,7 +1,7 @@
-/* Open Sensor Platform Project
- * https://github.com/sensorplatforms/open-sensor-platform
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2013 Sensor Platforms Inc.
+ * Copyright (C) 2016 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,11 @@ PortInfo gDbgUartPort;      //Debug information port
  */
 #ifdef UART_DMA_ENABLE
 # define DPRINTF_MPOOL_SIZE         (DPRINTF_BUFF_SIZE + 8)
-_declare_box( gMemPoolDprintf, DPRINTF_MPOOL_SIZE, MAX_DPRINTF_MESSAGES);
+
+//osPoolDef( gMemPoolDprintf, MAX_DPRINTF_MESSAGES, DPRINTF_MPOOL_SIZE );
+uint32_t gMemPoolDprintf[3+((DPRINTF_MPOOL_SIZE+3)/4)*(MAX_DPRINTF_MESSAGES)];
+const osPoolDef_t PrintBufPool = { MAX_DPRINTF_MESSAGES, DPRINTF_MPOOL_SIZE, gMemPoolDprintf };
+static osPoolId _BufPoolId;
 #endif
 
 
@@ -142,8 +146,10 @@ void *RemoveFromList( PortInfo *pPort )
  ***************************************************************************************************/
 void DebugPortInit( void )
 {
-    _init_box( gMemPoolDprintf, sizeof(gMemPoolDprintf), DPRINTF_MPOOL_SIZE );
-    gDbgUartPort.pBuffPool = gMemPoolDprintf;
+    _BufPoolId = osPoolCreate( &PrintBufPool );
+    ASF_assert( _BufPoolId != NULL );
+
+    gDbgUartPort.pBuffPool = _BufPoolId;
     gDbgUartPort.rxWriteIdx = 1;
     gDbgUartPort.rxReadIdx  = 0;
     gDbgUartPort.rcvTask = CMD_HNDLR_TASK_ID;
@@ -197,12 +203,12 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
         {
             if (byte == '\r' || byte == '\n')
             {
-                isr_evt_set( UART_CRLF_RECEIVE, asfTaskHandleTable[pPort->rcvTask].handle );
+                osSignalSet( asfTaskHandleTable[pPort->rcvTask].handle, UART_CRLF_RECEIVE );
             }
             else
             {
                 /* Wake up the task. */
-                isr_evt_set( UART_CMD_RECEIVE, asfTaskHandleTable[pPort->rcvTask].handle );
+                osSignalSet( asfTaskHandleTable[pPort->rcvTask].handle, UART_CMD_RECEIVE );
             }
         }
 
@@ -230,7 +236,7 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
 void *GetNextBuffer( PortInfo *pPort )
 {
     void *pFreeBuff = RemoveFromList( pPort );
-    ASF_assert(_free_box( pPort->pBuffPool, pFreeBuff ) == 0); //Free the current consumed buffer
+    ASF_assert( osPoolFree( pPort->pBuffPool, pFreeBuff ) == osOK ); //Free the current consumed buffer
     return pPort->pHead; //Return the current head of the list
 }
 #endif
@@ -263,7 +269,7 @@ int Print_LIPS( const char *fmt, ... )
 
 #if defined UART_DMA_ENABLE
     /* Note: Output will be truncated to allowed max size */
-    pNewBuff = _alloc_box(pPort->pBuffPool);
+    pNewBuff = osPoolAlloc(pPort->pBuffPool);
     ASF_assert( pNewBuff != NULL );
     pPrintBuff = M_GetBuffStart(pNewBuff);
     if (pPrintBuff != NULL)
@@ -331,7 +337,7 @@ int _dprintf( uint8_t dbgLvl, const char *fmt, ... )
 
 #ifdef UART_DMA_ENABLE
             /* Note: Output will be truncated to allowed max size */
-            pNewBuff = _alloc_box(pPort->pBuffPool);
+            pNewBuff = osPoolAlloc(pPort->pBuffPool);
             ASF_assert( pNewBuff != NULL );
             if (pNewBuff != NULL)
             {
