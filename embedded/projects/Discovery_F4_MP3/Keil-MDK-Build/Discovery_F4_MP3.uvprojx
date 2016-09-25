@@ -330,9 +330,9 @@
             <vShortWch>1</vShortWch>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>DEBUG_BUILD,UART_DMA_ENABLE,USE_HAL_DRIVER,STM32F407xx,DISCOVERY_F4_BOARD,ON_DEMAND_PROFILING,ASF_PROFILING,USE_USB_FS</Define>
+              <Define>__FPU_PRESENT=1,__CORTEX_M4F, __CMSIS_RTOS,DEBUG_BUILD,UART_DMA_ENABLE,USE_HAL_DRIVER,STM32F407xx,DISCOVERY_F4_BOARD,ON_DEMAND_PROFILING,ASF_PROFILING,USE_USB_FS</Define>
               <Undefine></Undefine>
-              <IncludePath>..\Sources\App;..\Sources\Config;..\Sources\BoardSupport;..\..\..\..\Include;..\..\..\Common\App;..\..\..\Common\ASF;..\..\..\..\External\RTOS\RTX\inc;..\..\..\..\External\RTOS\RTX\CM;..\..\..\..\External\MCU\STM32F4-CM4\HAL\Inc;..\..\..\..\External\MCU\CMSIS\Device\ST\STM32F4xx\Include;..\..\..\..\External\Middlewares\ST\STM32_USB_HOST_Library\Core\Inc;..\..\..\..\External\Middlewares\ST\STM32_USB_HOST_Library\Class\MSC\Inc;..\..\..\..\External\Middlewares\FatFs\src;..\..\..\..\External\Middlewares\FatFs\src\drivers;..\..\..\..\external\Middlewares\Helix\pub;..\..\..\..\external\Middlewares\Helix\real;..\..\..\Common\Modules\Bus-Drivers\STM32F4-CM4</IncludePath>
+              <IncludePath>..\Sources\App;..\Sources\Config;..\Sources\BoardSupport;..\..\..\..\Include;..\..\..\Common\App;..\..\..\Common\ASF;..\..\..\..\External\RTOS\CMSIS-RTX\inc;..\..\..\..\External\RTOS\CMSIS-RTX\src;..\..\..\..\External\MCU\STM32F4-CM4\HAL\Inc;..\..\..\..\External\MCU\CMSIS\Device\ST\STM32F4xx\Include;..\..\..\..\External\Middlewares\ST\STM32_USB_HOST_Library\Core\Inc;..\..\..\..\External\Middlewares\ST\STM32_USB_HOST_Library\Class\MSC\Inc;..\..\..\..\External\Middlewares\FatFs\src;..\..\..\..\External\Middlewares\FatFs\src\drivers;..\..\..\..\external\Middlewares\Helix\pub;..\..\..\..\external\Middlewares\Helix\real;..\..\..\Common\Modules\Bus-Drivers\STM32F4-CM4</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -585,9 +585,84 @@
               <FilePath>..\Sources\Config\rtx_conf_cm.c</FilePath>
             </File>
             <File>
-              <FileName>RTX_CM4F_PROF.lib</FileName>
-              <FileType>4</FileType>
-              <FilePath>..\..\..\..\external\RTOS\RTX\lib\RTX_CM4F_PROF.lib</FilePath>
+              <FileName>HAL_CM4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\ARM\HAL_CM4.c</FilePath>
+            </File>
+            <File>
+              <FileName>HAL_CM.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\HAL_CM.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_CMSIS.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_CMSIS.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Event.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_List.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_List.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Mailbox.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Mailbox.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_MemBox.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_MemBox.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Memory.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Memory.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Mutex.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Mutex.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Robin.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Robin.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Semaphore.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Semaphore.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_System.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_System.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Task.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Time.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Time.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_Timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\rt_Timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>SVC_Table.s</FileName>
+              <FileType>2</FileType>
+              <FilePath>..\..\..\..\external\RTOS\CMSIS-RTX\SRC\ARM\SVC_Table.s</FilePath>
             </File>
           </Files>
         </Group>
