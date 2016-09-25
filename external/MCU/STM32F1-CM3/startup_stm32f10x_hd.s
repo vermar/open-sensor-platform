@@ -161,7 +161,7 @@ Reset_Handler   PROC
                 LDR     R0, =__main
                 BX      R0
                 ENDP
-                
+
 ; Dummy Exception Handlers (infinite loops which can be modified)
 
 NMI_Handler     PROC
@@ -339,24 +339,21 @@ DMA2_Channel4_5_IRQHandler
 ; User Stack and Heap initialization
 ;*******************************************************************************
                  IF      :DEF:__MICROLIB
-                
+
                  EXPORT  __initial_sp
                  EXPORT  __heap_base
                  EXPORT  __heap_limit
-                
+
                  ELSE
-                
+
                  IMPORT  __use_two_region_memory
                  EXPORT  __user_initial_stackheap
-                 IMPORT NewHeap
-                 IMPORT TotalStkNeeded
+
 __user_initial_stackheap
 
-                 LDR     R0, =  NewHeap
-                 LDR     R5, =  TotalStkNeeded
-                 LDR     R4, [R5]
+                 LDR     R0, =  Heap_Mem
                  LDR     R1, =(gStackMem + gStackSize)
-                 ADD     R2, R0, R4
+                 LDR     R2, = (Heap_Mem +  Heap_Size)
                  LDR     R3, = gStackMem
                  BX      LR
 
