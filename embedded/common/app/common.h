@@ -37,9 +37,19 @@
 #define MAX_OS_TIMERS                           4
 
 /* Critical Section Locks */
-#define OS_SETUP_CRITICAL()                     int wasMasked
-#define OS_ENTER_CRITICAL()                     wasMasked = __disable_irq()
-#define OS_LEAVE_CRITICAL()                     if (!wasMasked) __enable_irq()
+#ifdef __GNUC__
+# define OS_SETUP_CRITICAL()
+# define OS_ENTER_CRITICAL()                    __disable_irq()
+# define OS_LEAVE_CRITICAL()                    __enable_irq()
+#else
+# define OS_SETUP_CRITICAL()                    uint32_t wasMasked
+# define OS_ENTER_CRITICAL()                    wasMasked = (uint32_t)__disable_irq()
+# define OS_LEAVE_CRITICAL()                    if (wasMasked == 0U) {__enable_irq();}
+#endif
+
+#ifdef __GNUC__
+# define __MODULE__                             (char*)__FUNCTION__
+#endif
 
 #ifdef DEBUG_BUILD
 # define ERR_LOG_MSG_SZ                         150
@@ -63,7 +73,7 @@
         __disable_irq();                                                                   \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
-        snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s], 0x%X, 0x%X, 0x%X",      \
+        snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s], 0x%lX, 0x%lX, 0x%lX",   \
          __MODULE__, __LINE__, #condition, (uint32_t)var1, (uint32_t)var2, (uint32_t)var3);\
         printf("%s\r\n", _errBuff);                                                        \
         SysRESET();                                                                        \
