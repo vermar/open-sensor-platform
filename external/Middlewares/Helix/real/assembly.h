@@ -298,6 +298,8 @@ static __inline Word64 SAR64(Word64 x, int n)
 
 #elif defined(__GNUC__) && defined(ARM)
 
+typedef long long Word64;
+
 static __inline int MULSHIFT32(int x, int y)
 {
     /* important rules for smull RdLo, RdHi, Rm, Rs:
@@ -344,6 +346,30 @@ static __inline int CLZ(int x)
 	} 
 
 	return numZeros;
+}
+
+typedef union _U64 {
+	Word64 w64;
+	struct {
+		/* ARM ADS = little endian */
+		unsigned int lo32;
+		signed int hi32;
+	} r;
+} U64;
+
+static __inline Word64 MADD64(Word64 sum64, int x, int y)
+{
+	U64 u;
+	u.w64 = sum64;
+
+	__asm__ volatile ("smlal %0,%1,%2,%3" : "+&r" (u.r.lo32), "+&r" (u.r.hi32) : "r" (x), "r" (y) : "cc");
+
+	return u.w64;
+}
+static __inline Word64 SAR64(Word64 x, int n)
+{
+	return x >> n;
+
 }
 
 #elif defined(ARM_TEST)
