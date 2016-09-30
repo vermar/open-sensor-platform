@@ -147,7 +147,7 @@ static UINT Mp3FillReadBuffer(BYTE* pInData, UINT unInDataLeft, FIL* pInFile)
     if(unRead < unSpaceLeft)
     {
         // zero-pad to avoid finding false sync word after last frame (from old data in readBuf)
-        memset(g_Mp3InBuffer + unInDataLeft + unRead, unSpaceLeft - unRead, 0);
+        memset(g_Mp3InBuffer + unInDataLeft + unRead, 0, unSpaceLeft - unRead);
     }
 
     return unRead;
