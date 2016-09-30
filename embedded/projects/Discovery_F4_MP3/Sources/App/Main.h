@@ -121,9 +121,6 @@ typedef struct RtcClockTag
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   F U N C T I O N   D E C L A R A T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-/* Updates RTC counter based on system tick counter */
-void UpdateRTC( void );
-
 /* RTC Counter (using TIM2 instead of RTC) */
 int32_t RTC_GetCounter( void );
 
