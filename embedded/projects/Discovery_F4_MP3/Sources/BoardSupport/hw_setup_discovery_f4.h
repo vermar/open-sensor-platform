@@ -363,9 +363,7 @@ void LED_Init( void );
  ***************************************************************************************************/
 static __inline MsgContext GetContext( void )
 {
-    extern uint32_t gStackMem;
-
-    return (__current_sp() < (uint32_t)&gStackMem)? CTX_THREAD : CTX_ISR;
+    return (__get_IPSR() != 0U)? CTX_ISR : CTX_THREAD;
 }
 
 
