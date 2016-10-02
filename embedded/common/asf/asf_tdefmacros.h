@@ -43,7 +43,7 @@
 
 #if ASF_TASK_DEF_TYPE == ASF_STACK_SETUP
 # define ASF_TASK_STATIC( ThreadId, EntryFunction, Priority, StackSize, QueueSize )           \
-    const uint32_t ThreadId##_StkSize = StackSize;
+    typedef struct { uint8_t _b[StackSize]; } ThreadId##_StkSize;
 #endif
 
 #if ASF_TASK_DEF_TYPE == ASF_QUEUE_SETUP
@@ -63,7 +63,7 @@
 
 #if ASF_TASK_DEF_TYPE == ASF_TOTAL_STACK_NEEDED
 # define ASF_TASK_STATIC( ThreadId, EntryFunction, Priority, StackSize, QueueSize )           \
-    +ThreadId##_StkSize
+    struct { uint8_t _b[StackSize]; } _##ThreadId##_StkSize;
 #endif
 
 

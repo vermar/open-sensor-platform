@@ -57,11 +57,10 @@
    a given mode. */
 #define ASF_TASK_DEF_TYPE ASF_TOTAL_STACK_NEEDED
 #include "asf_taskdeftype.h"
-const uint32_t TotalStkNeeded =
-(
-    2048        /* For other tasks */
-    #include "asf_tasks.h"
-);
+typedef struct _TotalStkNeeded
+{
+#include "asf_tasks.h"
+} TotalStkNeeded_t;
 
 
 /*----------------------------------------------------------------------------
@@ -105,7 +104,7 @@ const uint32_t TotalStkNeeded =
 //   <i> Defines the combined stack size for threads with user-provided stack size.
 //   <i> Default: 0
 #ifndef OS_PRIVSTKSIZE
- #define OS_PRIVSTKSIZE ((TotalStkNeeded+3)/4)       // this stack size value is in words
+ #define OS_PRIVSTKSIZE ((sizeof(TotalStkNeeded_t)+3)/4)       // this stack size value is in words
 #endif
 
 //   <q>Stack overflow checking

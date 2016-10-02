@@ -260,9 +260,7 @@ __attribute__((used)) void _mutex_release (OS_ID *mutex) {
 
 /* Main Thread definition */
 extern int main (void);
-extern const uint32_t INSTR_MANAGER_TASK_ID_StkSize;
-osThreadDef_t os_thread_def_main = {(os_pthread)main, osPriorityNormal, 1U, INSTR_MANAGER_TASK_ID_StkSize };
-
+osThreadDef_t os_thread_def_main = {(os_pthread)main, osPriorityNormal, 1U, sizeof(INSTR_MANAGER_TASK_ID_StkSize) };
 
 #if defined (__CC_ARM)
 
