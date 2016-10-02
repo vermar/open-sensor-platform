@@ -1,5 +1,10 @@
 STM32 Discovery-F4 MP3 Player
 =============================
+## Update: 01-Oct-2016
+
+GCC Support is here! Happy to announce that I was successfully able to adapt the Discovery_F4 MP3 project to Atollic TrueSTUDIO ARM v6.0.0 Lite version.
+Based on what Google is showing with some preliminary searching, this maybe the first project that provides a reference for CMSIS-RTX with GCC working on an STM32 device.
+
 ## Features and Enhancements
 This project was inspired by the works of Benjamin Vedder [http://vedder.se/2012/12/stm32f4-discovery-usb-host-and-mp3-player/] and Marco W. [http://www.mikrocontroller.net/topic/252319]. I was able to make the following enhancements on their work:
 - Based on [ASF (Application Support Framework)](https://github.com/sensorplatforms/open-sensor-platform/wiki/ASF) from Open Sensor Platform project.
