@@ -240,7 +240,7 @@ ASF_TASK void InstrManagerTask( ASF_TASK_ARG )
     asfTaskHandleTable[INSTR_MANAGER_TASK_ID].handle = osThreadGetId();
     asfTaskHandleTable[INSTR_MANAGER_TASK_ID].QId = osMessageCreate( &C_gAsfTaskInitTable[INSTR_MANAGER_TASK_ID].queue,
         asfTaskHandleTable[INSTR_MANAGER_TASK_ID].handle );
-    ASF_assert( asfTaskHandleTable[INSTR_MANAGER_TASK_ID].QId != NULL )
+    ASF_assert( asfTaskHandleTable[INSTR_MANAGER_TASK_ID].QId != NULL );
 
     /* Create other tasks & OS resources in the system */
     /* Jack up this task's priority temporarily while other threads are created */

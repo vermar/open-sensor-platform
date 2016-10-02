@@ -524,19 +524,19 @@ osStatus svcKernelInitialize (void) {
     }
 
     /* --- Idle Thread Stack --- */
-    pStack = (U32 *)mp_stk;
+    pStack = (uint32_t *)mp_stk;
     for ( idx = 0; idx < mp_stk_size/sizeof(C_gStackPattern); idx++)
     {
-        *pStack++ = *((U32 *)C_gStackPattern);
-        *pStack++ = *((U32 *)(C_gStackPattern+4));
+        *pStack++ = *((uint32_t *)C_gStackPattern);
+        *pStack++ = *((uint32_t *)(C_gStackPattern+4));
     }
 
     /* --- User threads (inc. main & timer) --- */
-    pStack = (U32 *)os_stack_mem;
+    pStack = (uint32_t *)os_stack_mem;
     for ( idx = 0; idx < os_stack_sz/sizeof(C_gStackPattern); idx++)
     {
-        *pStack++ = *((U32 *)C_gStackPattern);
-        *pStack++ = *((U32 *)(C_gStackPattern+4));
+        *pStack++ = *((uint32_t *)C_gStackPattern);
+        *pStack++ = *((uint32_t *)(C_gStackPattern+4));
     }
 #endif
 
