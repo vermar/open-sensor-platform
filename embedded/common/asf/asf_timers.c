@@ -51,6 +51,16 @@ static AsfTimer **_pAsfTimerList = (AsfTimer**)&AsfTimerList[0];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E     F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+
+/****************************************************************************************************
+ * @fn      AddTimerToList
+ *          Called by Timer Start to add timer in active timer list
+ *
+ * @param   pTimer  Pointer to the timer control block
+ *
+ * @return  Internal reference to the timer (index of the timer list)
+ *
+ ***************************************************************************************************/
 static uint16_t AddTimerToList(AsfTimer *pTimer)
 {
     uint16_t i;
@@ -69,6 +79,17 @@ static uint16_t AddTimerToList(AsfTimer *pTimer)
     ASF_assert(FALSE);
 }
 
+
+/****************************************************************************************************
+ * @fn      GetTimerAndRemoveFromList
+ *          Called by Timer Expiry function to remove timer for active timer list and return the 
+ *          pointer to the timer that expired
+ *
+ * @param   info  Internal reference to the timer that expired
+ *
+ * @return  Pointer to the timer control block
+ *
+ ***************************************************************************************************/
 static AsfTimer*  GetTimerAndRemoveFromList( uint16_t info)
 {
     const uint16_t numTimers = os_timernum & 0xFFFF;
@@ -85,6 +106,15 @@ static AsfTimer*  GetTimerAndRemoveFromList( uint16_t info)
 }
 
 
+/****************************************************************************************************
+ * @fn      RemoveTimerFromList
+ *          Called by KillTimer to remove timer for active timer list
+ *
+ * @param   pTimer  Pointer to the timer control block
+ *
+ * @return  none
+ *
+ ***************************************************************************************************/
 static void RemoveTimerFromList(AsfTimer *pTimer)
 {
     uint16_t i;
@@ -95,8 +125,8 @@ static void RemoveTimerFromList(AsfTimer *pTimer)
         if ( _pAsfTimerList[i] == pTimer )
         {
             _pAsfTimerList[i] = NULL;
+            return;
         }
-        return;
     }
 
     /* Timer not found! */
