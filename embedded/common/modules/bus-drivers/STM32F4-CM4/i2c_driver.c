@@ -233,6 +233,8 @@ void I2C_Wait_Completion( void )
         }
     } while (!(evtFlags & I2C_TXRX_STATUS_FAILED) && !(evtFlags & I2C_TXRX_STATUS_PASSED));
 #else
+    OS_RESULT result;
+
     result = os_evt_wait_or( I2C_TXRX_STATUS_FAILED | I2C_TXRX_STATUS_PASSED, MSEC_TO_TICS(20));
     if (result == OS_R_TMO)
     {
