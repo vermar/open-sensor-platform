@@ -146,7 +146,7 @@ void DBG_UART_IRQHandler(void)
 {
     uint8_t nextByte;
 
-    if (__HAL_UART_GET_IT_SOURCE(gDbgUartPort.hUart, UART_IT_RXNE) != RESET)
+    if (__HAL_UART_GET_FLAG(gDbgUartPort.hUart, UART_FLAG_RXNE) != RESET)
     {
         /* Read one byte from the receive data register */
         nextByte = DbgUartReadByte();
