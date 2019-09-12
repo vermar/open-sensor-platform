@@ -27,6 +27,9 @@
 #include "main.h"
 #include "osp-types.h"
 #include "asf_types.h"
+#ifdef __ICCARM__
+# include "intrinsics.h"
+#endif
 
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
@@ -37,17 +40,26 @@
 #define MAX_OS_TIMERS                           4
 
 /* Critical Section Locks */
-#ifdef __GNUC__
+#if defined (__GNUC__) //TODO Check if there is __get_interrupt_state() equivalent in GCC
 # define OS_SETUP_CRITICAL()
 # define OS_ENTER_CRITICAL()                    __disable_irq()
 # define OS_LEAVE_CRITICAL()                    __enable_irq()
-#else
+# define DISABLE_GLOBAL_IRQ()                   __disable_irq()
+#elif defined (__CC_ARM)
 # define OS_SETUP_CRITICAL()                    uint32_t wasMasked
 # define OS_ENTER_CRITICAL()                    wasMasked = (uint32_t)__disable_irq()
 # define OS_LEAVE_CRITICAL()                    if (wasMasked == 0U) {__enable_irq();}
+# define DISABLE_GLOBAL_IRQ()                   __disable_irq()
+#elif defined (__ICCARM__)
+# define OS_SETUP_CRITICAL()                    __istate_t wasMasked
+# define OS_ENTER_CRITICAL()                    wasMasked = __get_interrupt_state(); __disable_interrupt()
+# define OS_LEAVE_CRITICAL()                    __set_interrupt_state(wasMasked)
+# define DISABLE_GLOBAL_IRQ()                   __disable_interrupt()
+#else
+#error Compiler not supported.
 #endif
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__ICCARM__)
 # define __MODULE__                             (char*)__FUNCTION__
 #endif
 
@@ -57,7 +69,7 @@
     if (!(condition))                                                                      \
     {                                                                                      \
         extern char _errBuff[];                                                            \
-        __disable_irq();                                                                   \
+        DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
         snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s]", __MODULE__,            \
@@ -70,7 +82,7 @@
     if (!(condition))                                                                      \
     {                                                                                      \
         extern char _errBuff[];                                                            \
-        __disable_irq();                                                                   \
+        DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
         snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s], 0x%lX, 0x%lX, 0x%lX",   \
@@ -83,7 +95,7 @@
     if (!(condition))                                                                      \
     {                                                                                      \
         extern char _errBuff[];                                                            \
-        __disable_irq();                                                                   \
+        DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
         snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT_FATAL: %s(%d) - [%s]", __MODULE__,      \
@@ -96,7 +108,7 @@
     if (!(condition))                                                                      \
     {                                                                                      \
         extern char _errBuff[];                                                            \
-        __disable_irq();                                                                   \
+        DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
         snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s], MSG:%.100s",            \

@@ -29,8 +29,14 @@
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 extern const uint16_t C_gIdleStkSize;
-extern uint32_t gStackMem;
-extern uint32_t gStackSize;
+#ifdef __ICCARM__
+ #pragma section = "CSTACK"
+ uint32_t gStackMem = (uint32_t)__section_begin("CSTACK");
+ uint32_t gStackSize = (uint32_t)__section_size("CSTACK");
+#else /* for GCC or Keil CC */
+ extern uint32_t gStackMem;
+ extern uint32_t gStackSize;
+#endif
 
 extern const AsfTaskInitDef C_gAsfTaskInitTable[NUMBER_OF_TASKS];
 extern uint32_t gSystemRTCRefTime;
@@ -120,7 +126,7 @@ static uint32_t HighWaterMarkSearch( uint32_t start, uint32_t end )
 static void DoProfiling( osp_bool_t withStartEnd )
 {
     uint8_t  taskCounter, numTasks;
-    uint32_t start, end, highWater;
+    uint32_t start, end, highWater, size;
     uint32_t totalElapsedTime;
     osp_float_t taskLoad;
     P_TCB tskPtr;
@@ -141,10 +147,19 @@ static void DoProfiling( osp_bool_t withStartEnd )
         i_printf("%02d ", (highWater * 100)/asfTaskHandleTable[tid].stkSize);
     }
     /* Main stack check */
+#  ifdef __ICCARM__
+    start = gStackMem;
+    size = gStackSize;
+    end = start + size;
+#  else /* Keil or GCC compilers */
     start = (uint32_t)&gStackMem;
-    end = start + (uint32_t)&gStackSize;
+    size = (uint32_t)&gStackSize;
+    end = start + size;
+#  endif
+
     highWater = HighWaterMarkSearch( start, end );
-    i_printf("%02d ***\r\n\n", (highWater * 100)/((uint32_t)&gStackSize));
+    i_printf("%02d ***\r\n\n", (highWater * 100)/size);
+
 # else
     i_printf("\r\n------------------------------------------------------\r\n");
     totalElapsedTime = RTC_GetCounter() - gSystemRTCRefTime;
@@ -193,15 +208,22 @@ static void DoProfiling( osp_bool_t withStartEnd )
             C_gIdleStkSize, (highWater * 100)/C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
     }
     /* Main stack check */
+#  ifdef __ICCARM__
+    start = (uint32_t)gStackMem;
+    size = gStackSize;
+    end = start + size;
+#  else /* Keil or GCC compilers */
     start = (uint32_t)&gStackMem;
-    end = start + (uint32_t)&gStackSize;
+    size = (uint32_t)&gStackSize;
+    end = start + size;
+#  endif
     highWater = HighWaterMarkSearch( start, end );
     if (withStartEnd) {
         i_printf("%16s: %08x/%08x %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", start, end, highWater,
-            (uint32_t)&gStackSize, (highWater * 100)/((uint32_t)&gStackSize));
+            size, (highWater * 100)/size);
     } else {
         i_printf("%16s: %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", highWater,
-            (uint32_t)&gStackSize, (highWater * 100)/((uint32_t)&gStackSize));
+            size, (highWater * 100)/size);
     }
     i_printf("------------------------------------------------------\r\n");
 # endif
