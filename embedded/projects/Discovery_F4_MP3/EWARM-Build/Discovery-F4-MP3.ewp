@@ -364,7 +364,7 @@
                     <state>$PROJ_DIR$\..\..\..\..\external\MCU\STM32F4-CM4\HAL\Inc</state>
                     <state>$PROJ_DIR$\..\..\..\..\external\MCU\CMSIS\Device\ST\STM32F4xx\Include</state>
                     <state>$PROJ_DIR$\..\..\..\..\external\RTOS\CMSIS-RTX\INC</state>
-                    <state>$PROJ_DIR$\..\..\..\..\..\..\Keil_v5\ARM\PACK\ARM\CMSIS\5.3.0\CMSIS\Include</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\MCU\CMSIS\Include</state>
                     <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\ST\STM32_USB_Host_Library\Core\Inc</state>
                     <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\ST\STM32_USB_Host_Library\Class\MSC\Inc</state>
                     <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\Helix\pub</state>
