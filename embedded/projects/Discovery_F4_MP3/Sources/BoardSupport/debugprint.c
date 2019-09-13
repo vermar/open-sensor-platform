@@ -311,6 +311,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 
+#if 0 //This is only called if receive is started using HAL_UART_Receive_IT()
 /* ISR handler for Uart RX Complete that is called from HAL_UART_IRQHandler implemented in stm32f7xx_hal_uart.c */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -319,6 +320,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     //D0_printf("%02X ", huart->pRxBuffPtr[-1]);
     RxBytesToBuff( &gDbgUartPort, *pTemp );
 }
+#endif
 
 
 /*-------------------------------------------------------------------------------------------------*\

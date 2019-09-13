@@ -139,14 +139,14 @@ void DBG_UART_DMA_TX_IRQHandler(void)
   * @brief  This function handles USARTx interrupt request.
   * @param  None
   * @retval None
-  * @Note   This function is redefined in "main.h" and related to DMA  
-  *         used for USART data transmission     
+  * @Note   This function is redefined in "main.h" and related to DMA
+  *         used for USART data transmission
   */
 void DBG_UART_IRQHandler(void)
 {
     uint8_t nextByte;
 
-    if (__HAL_UART_GET_IT_SOURCE(gDbgUartPort.hUart, UART_IT_RXNE) != RESET)
+    if (__HAL_UART_GET_FLAG(gDbgUartPort.hUart, UART_FLAG_RXNE) != RESET)
     {
         /* Read one byte from the receive data register */
         nextByte = DbgUartReadByte();
@@ -166,32 +166,32 @@ void OTG_FS_IRQHandler(void)
 }
 
 /**
-  * @brief  This function handles main I2S interrupt. 
+  * @brief  This function handles main I2S interrupt.
   * @param  None
   * @retval None
   */
 void I2S3_IRQHandler(void)
-{ 
+{
   HAL_DMA_IRQHandler(hAudioOutI2s.hdmatx);
 }
 
 /**
-  * @brief  This function handles master I2C event interrupt. 
+  * @brief  This function handles master I2C event interrupt.
   * @param  None
   * @retval None
   */
 void I2C_IF_BUS_EVENT_IRQHandler(void)
-{ 
+{
   I2C_Driver_ISR_Handler();
 }
 
 /**
-  * @brief  This function handles master I2C error interrupt. 
+  * @brief  This function handles master I2C error interrupt.
   * @param  None
   * @retval None
   */
 void I2C_IF_BUS_ERROR_IRQHandler(void)
-{ 
+{
   I2C_Driver_ERR_ISR_Handler();
 }
 
