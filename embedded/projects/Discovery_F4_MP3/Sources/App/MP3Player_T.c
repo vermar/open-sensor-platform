@@ -46,15 +46,15 @@ extern AsfTaskHandle asfTaskHandleTable[];
 #define DMA_EVT_FULL_TRANSFER       0x0200
 #define APP_EVT_STOP_REQUEST        0x0400
 
-#define HP_VOL_LEVEL                80      //% of Full Volume
+#define HP_VOL_LEVEL                60      //% of Full Volume
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 typedef enum
 {
-  DISCONNECTION_EVENT = 1,  
-  CONNECTION_EVENT,
+    DISCONNECTION_EVENT = 1,
+    CONNECTION_EVENT,
 } MSC_ApplicationTypeDef;
 
 /*-------------------------------------------------------------------------------------------------*\
@@ -178,11 +178,11 @@ static uint32_t Mp3ReadId3V2Text(FIL* pInFile, uint32_t unDataLen, char* pszBuff
                 }
                 else if(byEncoding == 1)
                 {
-                    D1_printf("#### CHECK - Unicode!\r\n");
+                    //D1_printf("#### CHECK - Unicode!\r\n");
                     // UTF16LE unicode
                     uint32_t r = 0;
                     uint32_t w = 0;
-                    if((unDataLen > 2) && (pszBuffer[0] == 0xFF) && (pszBuffer[1] == 0xFE))
+                    if((unDataLen > 2) && ((uint8_t)pszBuffer[0] == 0xFF) && ((uint8_t)pszBuffer[1] == 0xFE))
                     {
                         // ignore BOM, assume LE
                         r = 2;
@@ -253,7 +253,7 @@ static uint32_t Mp3ReadId3V2Tag(FIL* pInFile)
             if(id3hd[5] & ID3_EXT_HDR_FLAG)
             {
                 BYTE exhd[4]; //First 4 bytes of extended header gives size of the header (excluding itself)
-                D1_printf("#### CHECK!! Extended Header\r\n");
+                //D1_printf("#### CHECK!! Extended Header\r\n");
                 f_read(pInFile, exhd, 4, &unRead);
                 size_t unExHdrSkip = ((exhd[0] & 0x7f) << 21) | ((exhd[1] & 0x7f) << 14) | ((exhd[2] & 0x7f) << 7) | (exhd[3] & 0x7f);
                 unExHdrSkip -= 4;
@@ -392,16 +392,16 @@ static void MSC_Application(void)
  *
  ***************************************************************************************************/
 static void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id)
-{  
+{
     switch(id)
-    { 
+    {
     case HOST_USER_SELECT_CONFIGURATION:
         break;
 
     case HOST_USER_DISCONNECTION:
         SendAppEvent( DISCONNECTION_EVENT );
-        LED_Off(LED_GREEN); 
-        LED_Off(LED_RED);  
+        LED_Off(LED_GREEN);
+        LED_Off(LED_RED);
         break;
 
     case HOST_USER_CLASS_ACTIVE:
@@ -865,7 +865,7 @@ ASF_TASK void Mp3PlayerTask( ASF_TASK_ARG )
     }
 }
 
-#if 1//ndef __CMSIS_RTOS
+
 /****************************************************************************************************
  * @fn      UsbHostTask
  *          This task handles USB Host (OTG) stack.
@@ -899,7 +899,6 @@ ASF_TASK void UsbHostTask( ASF_TASK_ARG )
         (void)flags;
     }
 }
-#endif
 
 
 /*-------------------------------------------------------------------------------------------------*\
