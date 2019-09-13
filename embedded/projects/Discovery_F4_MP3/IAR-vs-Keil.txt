@@ -1,0 +1,133 @@
+__FPU_PRESENT=1
+__CORTEX_M4F
+__CMSIS_RTOS
+DEBUG_BUILD
+UART_DMA_ENABLE
+USE_HAL_DRIVER
+STM32F407xx
+DISCOVERY_F4_BOARD
+ON_DEMAND_PROFILING
+ASF_PROFILING
+USE_USB_FS
+
+Keil - O0
+Program Size: Code=90264 RO-data=16764 RW-data=280 ZI-data=84368
+------------------------------------------------------
+InstrManagerTask: 0604/1024     58%     0.00%   37
+  CmdHandlerTask: 0120/1024     11%     0.00%   4
+     UsbHostTask: 0364/1280     28%     0.00%   301
+   Mp3PlayerTask: 2644/3328     79%     68.18%  16835
+       IDLE TASK: 0064/0200     32%     31.82%  2799
+    System Stack: 0328/0512     64%      -*-     -*-
+------------------------------------------------------
+Keil - O1
+Program Size: Code=76116 RO-data=16608 RW-data=280 ZI-data=83808
+------------------------------------------------------
+InstrManagerTask: 0588/1024     57%     0.01%   55
+  CmdHandlerTask: 0120/1024     11%     0.00%   7
+     UsbHostTask: 0336/1280     26%     0.00%   351
+   Mp3PlayerTask: 2452/3328     73%     45.42%  20563
+       IDLE TASK: 0064/0200     32%     54.57%  6207
+    System Stack: 0280/0512     54%      -*-     -*-
+------------------------------------------------------
+
+IAR - Low
+------------------------------------------------------
+InstrManagerTask: 0528/1024     51%     0.00%   19
+  CmdHandlerTask: 0168/1024     16%     0.00%   4
+     UsbHostTask: 0428/1280     33%     0.00%   254
+   Mp3PlayerTask: 2480/3328     74%     44.45%  8548
+       IDLE TASK: 0064/0200     32%     55.54%  2089
+    System Stack: 0304/1024     29%      -*-     -*-
+------------------------------------------------------
+
+Keil - O3
+Program Size: Code=72416 RO-data=16608 RW-data=280 ZI-data=83808
+------------------------------------------------------
+InstrManagerTask: 0580/1024     56%     0.00%   18
+  CmdHandlerTask: 0112/1024     10%     0.00%   4
+     UsbHostTask: 0320/1280     25%     0.00%   258
+   Mp3PlayerTask: 2492/3328     74%     27.34%  7157
+       IDLE TASK: 0064/0200     32%     72.65%  2329
+    System Stack: 0272/0512     53%      -*-     -*-
+------------------------------------------------------
+
+Keil - O3, Otime
+Program Size: Code=79496 RO-data=16608 RW-data=280 ZI-data=83808  
+------------------------------------------------------
+InstrManagerTask: 0532/1024     51%     0.00%   64
+  CmdHandlerTask: 0104/1024     10%     0.00%   8
+     UsbHostTask: 0296/1280     23%     0.00%   364
+   Mp3PlayerTask: 2460/3328     73%     15.62%  18400
+       IDLE TASK: 0064/0200     32%     84.37%  10594
+    System Stack: 0224/0512     43%      -*-     -*-
+------------------------------------------------------
+
+IAR - None
+  95'405 bytes of readonly  code memory
+  20'533 bytes of readonly  data memory
+  84'390 bytes of readwrite data memory
+------------------------------------------------------
+InstrManagerTask: 0496/1024     48%     0.00%   46
+  CmdHandlerTask: 0192/1024     18%     0.00%   4
+     UsbHostTask: 0436/1280     34%     0.00%   324
+   Mp3PlayerTask: 2668/3328     80%     52.21%  18744
+       IDLE TASK: 0064/0200     32%     47.78%  4814
+    System Stack: 0384/1024     37%      -*-     -*-
+------------------------------------------------------
+
+IAR - Med
+  79'268 bytes of readonly  code memory
+  17'384 bytes of readonly  data memory
+  84'393 bytes of readwrite data memory
+------------------------------------------------------
+InstrManagerTask: 0480/1024     46%     0.01%   82
+  CmdHandlerTask: 0136/1024     13%     0.00%   7
+     UsbHostTask: 0436/1280     34%     0.00%   539
+   Mp3PlayerTask: 2456/3328     73%     31.19%  36702
+       IDLE TASK: 0064/0200     32%     68.80%  11725
+    System Stack: 0272/1024     26%      -*-     -*-
+------------------------------------------------------
+
+IAR - High (Balanced)
+  74'996 bytes of readonly  code memory
+  17'288 bytes of readonly  data memory
+  84'389 bytes of readwrite data memory
+(Crash - USB Memory Connected)
+ASSERT: _ASFReceiveMessage(205) - [((evt.status == osEventMessage) || (evt.status == osOK))], 0x50000440, 0x0, 0x0
+No response for profiling when USB not connected.
+
+IAR - High (Speed)
+  82'334 bytes of readonly  code memory
+  17'285 bytes of readonly  data memory
+  84'386 bytes of readwrite data memory
+(Crash - USB Memory Connected)
+ASSERT: _ASFReceiveMessage(205) - [((evt.status == osEventMessage) || (evt.status == osOK))], 0x50000440, 0x0, 0x0
+No response for profiling when USB not connected.
+
+
+IAR - High (Balanced, instruction scheduling disabled)
+  74'688 bytes of readonly  code memory
+  17'286 bytes of readonly  data memory
+  84'389 bytes of readwrite data memory
+------------------------------------------------------
+InstrManagerTask: 0592/1024     57%     0.03%   44
+  CmdHandlerTask: 0128/1024     12%     0.00%   8
+     UsbHostTask: 0464/1280     36%     0.00%   284
+   Mp3PlayerTask: 2736/3328     82%     24.90%  10016
+       IDLE TASK: 0064/0200     32%     75.09%  6498
+    System Stack: 0248/1024     24%      -*-     -*-
+------------------------------------------------------
+
+IAR - High (Speed, instruction scheduling disabled)
+  82'106 bytes of readonly  code memory
+  17'285 bytes of readonly  data memory
+  84'386 bytes of readwrite data memory
+------------------------------------------------------
+InstrManagerTask: 0488/1024     47%     0.01%   73
+  CmdHandlerTask: 0120/1024     11%     0.00%   7
+     UsbHostTask: 0428/1280     33%     0.00%   394
+   Mp3PlayerTask: 2208/3328     66%     16.54%  21167
+       IDLE TASK: 0064/0200     32%     83.46%  12331
+    System Stack: 0256/1024     25%      -*-     -*-
+------------------------------------------------------
