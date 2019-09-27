@@ -202,7 +202,7 @@ void _ASFReceiveMessage ( TaskId rcvTask, MessageBuffer **pMbuf, char *_file, in
 
     /* Wait for receive */
     evt = osMessageGet( asfTaskHandleTable[rcvTask].QId, osWaitForever );
-    ASF_assert_var(((evt.status == osEventMessage) || (evt.status == osOK)), evt.status, 0, 0);
+    ASF_assert_var((evt.status == osEventMessage), evt.status, 0, 0);
     *pMbuf = evt.value.p;
 }
 
@@ -231,11 +231,11 @@ osp_bool_t _ASFReceiveMessagePoll ( TaskId rcvTask, MessageBuffer **pMbuf, char 
 
     /* Try to receive without waiting */
     evt = osMessageGet( asfTaskHandleTable[rcvTask].QId, 0 );
-    if (evt.status == osEventTimeout)
+    if (evt.status == osOK)
     {
         return false;
     }
-    ASF_assert_var(((evt.status == osEventMessage) || (evt.status == osOK)), evt.status, 0, 0);
+    ASF_assert_var((evt.status == osEventMessage), evt.status, 0, 0);
     *pMbuf = evt.value.p;
     return true;
 }
