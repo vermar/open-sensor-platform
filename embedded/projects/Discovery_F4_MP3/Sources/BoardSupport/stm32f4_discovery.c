@@ -266,13 +266,13 @@ void AUDIO_IO_Init(void)
   HAL_GPIO_WritePin(AUDIO_RESET_GPIO, AUDIO_RESET_PIN, GPIO_PIN_RESET);
   
   /* Wait for a delay to insure registers erasing */
-  ASF_Delay(5); 
+  ASFTaskSleep(5); 
   
   /* Power on the codec */
   HAL_GPIO_WritePin(AUDIO_RESET_GPIO, AUDIO_RESET_PIN, GPIO_PIN_SET);
   
   /* Wait for a delay to insure registers erasing */
-  ASF_Delay(5); 
+  ASFTaskSleep(5); 
 }
 
 /**

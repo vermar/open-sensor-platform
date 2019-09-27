@@ -140,6 +140,12 @@
 #define ASFTimerStart( owner, ref, tick, pTimer )  \
     _ASFTimerStart( owner, ref, tick, pTimer, __MODULE__, __LINE__ )
 
+#ifdef __CMSIS_RTOS
+# define ASFTaskSleep(mSec)             osDelay(mSec)
+#else
+# define ASFTaskSleep(mSec)             os_dly_wait(MSEC_TO_TICS(mSec))
+#endif
+
 /*-------------------------------------------------------------------------------------------------*\
  |    T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/

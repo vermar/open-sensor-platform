@@ -51,8 +51,6 @@
 #define SEC_TO_TICS(S)                          ((uint32_t)((S) * TICS_PER_SEC))
 #define MSEC_TO_TICS(M)                         ((uint32_t)(((M) + (MSEC_PER_TICK-1))/MSEC_PER_TICK))
 
-#define ASF_Delay(mSec)                         osDelay(mSec)
-
 /* ########################################################################## */
 /* #    F L A S H  S T O R A G E                                            # */
 /* ########################################################################## */
