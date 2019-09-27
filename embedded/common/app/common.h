@@ -34,8 +34,14 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
-#define OS_WAIT_NEVER                           0x00    ///< Zero wait as defined by RTX
-#define OS_WAIT_FOREVER                         0xFFFF  ///< Wait forever as defined by RTX
+#ifdef __CMSIS_RTOS
+# define OS_WAIT_NEVER                          0x00    ///< Zero wait as defined by CMSIS-RTOS
+# define OS_WAIT_FOREVER                        osWaitForever  ///< Wait forever as defined by CMSIS-RTOS
+#else
+# define OS_WAIT_NEVER                          0x00    ///< Zero wait as defined by RTX
+# define OS_WAIT_FOREVER                        0xFFFF  ///< Wait forever as defined by RTX
+#endif
+
 #define TIMER_NOT_IN_USE                        0xFFFFC0DE
 #define MAX_OS_TIMERS                           4
 
