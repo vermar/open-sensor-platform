@@ -38,6 +38,10 @@
 # include "hw_setup_discovery_f4.h"
 #endif
 
+#ifdef NUCLEO_L452RE_BOARD
+# include "hw_setup_nucleo_l452.h"
+#endif
+
 
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
