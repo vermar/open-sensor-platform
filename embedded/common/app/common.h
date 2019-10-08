@@ -133,7 +133,7 @@
 /* Command Parser / UART receive event */
 #define UART_CMD_RECEIVE            0x0020
 #define UART_CRLF_RECEIVE           0x0040 ///< Receive CR or LF character
-#define EVT_WAIT_FOREVER            0xFFFF
+#define EVT_WAIT_FOREVER            OS_WAIT_FOREVER
 
 #define ASFKillTimer( ptim )         \
     _ASFKillTimer( ptim, __MODULE__, __LINE__ )
@@ -182,7 +182,7 @@ typedef struct PortInfoTag
     fpInputValidate_t   ValidateInput;
     uint32_t       UartBaseAddress;
 # ifndef USE_HAL_DRIVER
-    DMAChannel_t   DMAChannel;
+    DMA_Channel_TypeDef *DMAChannel;
 # else
     DMAhandle_t    *hDMA;
     UARThandle_t   *hUart;
