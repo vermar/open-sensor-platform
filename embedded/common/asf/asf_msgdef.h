@@ -43,7 +43,7 @@ ASF_MSG_DEF( MSG_TIMER_EXPIRY,      MsgTimerExpiry      msgTimerExpiry      )
 ASF_MSG_DEF( MSG_PROFILING_REQ,     MsgNoData           msgProfilingReq     )
 
 /* Now include application specific messages */
-#include "app_msgdef.h"
+#include "App_Msgdef.h"
 
 /*-------------------------------------------------------------------------------------------------*\
  |    E N D   O F   F I L E

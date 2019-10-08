@@ -34,7 +34,7 @@
  |    C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
 #if !defined (IN_ASF_TASK_DEF)
-# error This file can only be included in ASF_TaskDefType.h
+# error This file can only be included in asf_taskdeftype.h
 #endif
 
 #if ASF_TASK_DEF_TYPE == ASF_TASK_IDS

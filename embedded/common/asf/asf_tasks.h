@@ -58,7 +58,7 @@ ASF_TASK_STATIC ( INSTR_MANAGER_TASK_ID,  InstrManagerTask,   osPriorityIdle,  0
 ASF_TASK_STATIC ( CMD_HNDLR_TASK_ID,      CmdHandlerTask,     osPriorityLow,   0x400,    4 )
 
 /* Additional tasks specific to application is defined in App_Tasks.h */
-#include "app_tasks.h"
+#include "App_Tasks.h"
 
 
 /*-------------------------------------------------------------------------------------------------*\
