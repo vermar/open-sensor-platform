@@ -20,6 +20,26 @@
 *.tmp
 *.uvproj.saved_uv4
 *.build_log.*
+*.dbgconf
+RTE_Components.h
+
+# IAR EWARM
+*.xcl
+*.pbi
+*.htm
+*.ninja
+*.ewt
+*.dnx
+*.crun
+*.dbgdt
+*.cspy.bat
+*.cspy.ps1
+*.pbd
+*.pbd.browse
+*.pbw
+*.sim
+*.wsdt
+.ninja_*
 
 # Libraries
 *.lib
