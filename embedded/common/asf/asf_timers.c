@@ -262,8 +262,8 @@ void _ASFKillTimer ( AsfTimer *pTimer, char *_file, int _line )
     err = osTimerStop( tId );
     ASF_assert( err == osOK );
     OS_ENTER_CRITICAL();
-    pTimer->sysUse = TIMER_NOT_IN_USE; //Timer no longer in use
     _AsfTimers[pTimer->sysUse].inUse = false;
+    pTimer->sysUse = TIMER_NOT_IN_USE; //Timer no longer in use
     OS_LEAVE_CRITICAL();
 }
 
