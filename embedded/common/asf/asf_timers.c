@@ -129,7 +129,7 @@ static void _TimerStart ( AsfTimer *pTimer, char *_file, int _line )
     int32_t freeIdx = GetFreeTimerIdx();
     ASF_assert(freeIdx >= 0);
     ASF_assert( pTimer != NULLP );
-    ASF_assert( pTimer->sysUse == TIMER_NOT_IN_USE ); //In case we are trying to restart a running timer
+    ASF_assert_var( pTimer->sysUse == TIMER_NOT_IN_USE, pTimer->userValue, pTimer->owner, 0 ); //In case we are trying to restart a running timer
 
     _AsfTimers[freeIdx].asfT = pTimer; //Store reference of the application timer
     pTimer->sysUse = freeIdx;
@@ -203,7 +203,7 @@ osp_bool_t ASFTimerStarted ( AsfTimer *pTimer )
  *
  * @see     ASFTimerKill()
 ***************************************************************************************************/
-void _ASFTimerStart( TaskId owner, uint16_t ref, uint16_t tick, AsfTimer *pTimer, char *_file, int _line  )
+void _ASFTimerStart( TaskId owner, uint16_t ref, uint32_t tick, AsfTimer *pTimer, char *_file, int _line  )
 {
     pTimer->owner = owner;
     pTimer->ticks = tick;

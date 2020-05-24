@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include "hw_setup.h"
 #include "asf_msgstruct.h"
-#include "main.h"
+#include "Main.h"
 #include "osp-types.h"
 #include "asf_types.h"
 #ifdef __ICCARM__
@@ -43,7 +43,9 @@
 #endif
 
 #define TIMER_NOT_IN_USE                        0xFFFFC0DE
-#define MAX_OS_TIMERS                           4
+#ifndef MAX_OS_TIMERS
+# define MAX_OS_TIMERS       4
+#endif
 
 /* Critical Section Locks */
 #if defined (__GNUC__) //TODO Check if there is __get_interrupt_state() equivalent in GCC
@@ -146,6 +148,32 @@
 # define ASFTaskSleep(mSec)             os_dly_wait(MSEC_TO_TICS(mSec))
 #endif
 
+/* Some helper macros */
+#define M_LsbOfShort(val)               ((uint8_t)((val) & 0xFF))
+#define M_MsbOfShort(val)               ((uint8_t)(((val) >> 8) & 0xFF))
+#define M_BytesToShort(msb, lsb)        (((uint16_t)(msb) << 8) + ((lsb) & 0xFF))
+#define M_Byte0ofLong(val)              ((uint8_t)((val) & 0xFF))
+#define M_Byte1ofLong(val)              ((uint8_t)(((val) >> 8) & 0xFF))
+#define M_Byte2ofLong(val)              ((uint8_t)(((val) >> 16) & 0xFF))
+#define M_Byte3ofLong(val)              ((uint8_t)(((val) >> 24) & 0xFF))
+#define M_BytesToLong(b3, b2, b1, b0)   (((uint32_t)(b3) << 24) +   \
+                                        ((uint32_t)(b2) << 16) +    \
+                                        ((uint32_t)(b1) << 8) + (b0))
+#define M_Byte0ofU64(val)               ((uint8_t)((val) & 0xFF))
+#define M_Byte1ofU64(val)               ((uint8_t)(((val) >> 8) & 0xFF))
+#define M_Byte2ofU64(val)               ((uint8_t)(((val) >> 16) & 0xFF))
+#define M_Byte3ofU64(val)               ((uint8_t)(((val) >> 24) & 0xFF))
+#define M_Byte4ofU64(val)               ((uint8_t)(((val) >> 32) & 0xFF))
+#define M_Byte5ofU64(val)               ((uint8_t)(((val) >> 40) & 0xFF))
+#define M_Byte6ofU64(val)               ((uint8_t)(((val) >> 48) & 0xFF))
+#define M_Byte7ofU64(val)               ((uint8_t)(((val) >> 56) & 0xFF))
+#define M_BytesToLongLong(b7, b6, b5, b4, b3, b2, b1, b0)   \
+    (((uint64_t)(b7) << 56) + ((uint64_t)(b6) << 48) +      \
+    ((uint64_t)(b5) << 40) + ((uint64_t)(b4) << 32) +       \
+    ((uint64_t)(b3) << 24) + ((uint64_t)(b2) << 16) +       \
+    ((uint64_t)(b1) << 8) + (b0))
+
+
 /*-------------------------------------------------------------------------------------------------*\
  |    T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
@@ -159,7 +187,7 @@ typedef struct AsfTimerTag
 {
     TimerId         timerId;   /**< Id of the timer - internal use    */
     TaskId          owner;     /**< Owner task that created the timer */
-    uint16_t        ticks;     /**< Timeout value in system ticks     */
+    uint32_t        ticks;     /**< Timeout value in system ticks     */
     uint16_t        userValue; /**< User defined value                */
     uint32_t        sysUse;    /**< For use by the system             */
 } AsfTimer;
@@ -173,6 +201,7 @@ typedef osp_bool_t (*fpInputValidate_t)(uint8_t);
 typedef struct PortInfoTag
 {
     osPoolId       pBuffPool;
+    UARThandle_t   *hUart;
 #ifdef UART_DMA_ENABLE
     void           *pHead;
     void           *pTail;
@@ -185,7 +214,6 @@ typedef struct PortInfoTag
     DMA_Channel_TypeDef *DMAChannel;
 # else
     DMAhandle_t    *hDMA;
-    UARThandle_t   *hUart;
 # endif
 #else
     /** Circular transmit buffer:
@@ -253,7 +281,7 @@ extern PortInfo gDbgUartPort;
 #define D2_printf( format, ... )        _dprintf( 2, format, ## __VA_ARGS__ )
 
 void ASFTimerInitialize( void );
-void _ASFTimerStart( TaskId owner, uint16_t ref, uint16_t tick, AsfTimer *pTimer, char *_file, int _line  );
+void _ASFTimerStart( TaskId owner, uint16_t ref, uint32_t tick, AsfTimer *pTimer, char *_file, int _line  );
 osp_bool_t ASFTimerStarted ( AsfTimer *pTimer );
 void _ASFKillTimer( AsfTimer *pTimer, char *_file, int _line );
 void ASFTimerExpiry ( void const *arg );
