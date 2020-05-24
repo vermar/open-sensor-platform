@@ -42,8 +42,9 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   F U N C T I O N   D E C L A R A T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-/* Platform/Device dependent macros */
+/* Platform/Device dependent macros & functions */
 void UartTxDMAStart( PortInfo *pPort, uint8_t *pTxBuffer, uint16_t txBufferSize );
+void RxBytesToBuff( PortInfo *pPort, uint8_t byte );
 
 #ifndef UART_DMA_ENABLE
 bool_t GetNextByteToTx( uint8_t* pucByte );
@@ -62,15 +63,19 @@ static __inline void EnableDbgUartInterrupt( void ) {
 
 #ifdef UART_DMA_ENABLE
 static __inline void EnableDbgUartDMAxferCompleteInt( void ) {
+    /* Not used as HAL_UART_Transmit_DMA() handles it internally */
 }
 
 static __inline void EnableDbgUartDMAChannel( void ) {
+    /* Not used as HAL_UART_Transmit_DMA() handles it internally */
 }
 
 static __inline void DisableDbgUartDMAChannel( void ) {
+    /* Not used - handled by HAL driver */
 }
 
 static __inline void EnableDbgUartDMATxRequest( void ) {
+    /* Not used - handled by HAL driver */
 }
 #endif
 

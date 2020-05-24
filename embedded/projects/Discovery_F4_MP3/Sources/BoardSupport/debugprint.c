@@ -28,7 +28,7 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-extern osp_bool_t ValidInputData( uint8_t inByte );
+int32_t ser_putchar (int32_t c);
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
@@ -44,15 +44,28 @@ PortInfo gDbgUartPort;      //Debug information port
 #ifdef UART_DMA_ENABLE
 # define DPRINTF_MPOOL_SIZE         (DPRINTF_BUFF_SIZE + 8)
 
-//osPoolDef( gMemPoolDprintf, MAX_DPRINTF_MESSAGES, DPRINTF_MPOOL_SIZE );
 uint32_t gMemPoolDprintf[3+((DPRINTF_MPOOL_SIZE+3)/4)*(MAX_DPRINTF_MESSAGES)];
 const osPoolDef_t PrintBufPool = { MAX_DPRINTF_MESSAGES, DPRINTF_MPOOL_SIZE, gMemPoolDprintf };
 static osPoolId _BufPoolId;
 #endif
 
+#define DEL_CHAR_W_ECHO             "\x08 \x08"
+#define DEL_CHAR_NO_ECHO            " \x08"
+#define ESC_CHAR                    0x1B
+
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+/* Support for ANSI escape-sequence handling */
+typedef enum _EscSeq
+{
+    ES_NONE,
+    ES_IN_ESC_SEQ1,
+    ES_IN_ESC_SEQ2,
+    ES_CURSOR_UP,
+    ES_CURSOR_DN,
+    ES_SKIP,
+} EscSeq_t;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
@@ -60,6 +73,7 @@ static osPoolId _BufPoolId;
 /* UART handler declaration */
 static UART_HandleTypeDef _UartHandle;
 static DMA_HandleTypeDef _TxDmaHandle;
+static osp_bool_t _enEcho = false;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    F O R W A R D   F U N C T I O N   D E C L A R A T I O N S
@@ -68,6 +82,69 @@ static DMA_HandleTypeDef _TxDmaHandle;
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E     F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+
+/****************************************************************************************************
+ * @fn      CheckAnsiEsc
+ *          Checks for start of Escape sequence and identifies some common ones used
+ *
+ ***************************************************************************************************/
+static EscSeq_t CheckAnsiEsc(uint8_t inByte)
+{
+    static EscSeq_t esState = ES_NONE;
+    EscSeq_t ret = ES_SKIP;
+
+    switch (inByte)
+    {
+    case ESC_CHAR:
+        if ((esState == ES_NONE) || (esState == ES_CURSOR_UP) || (esState == ES_CURSOR_DN))
+        {
+            esState = ES_IN_ESC_SEQ1;
+        }
+        else
+        {
+            esState = ret = ES_NONE;
+        }
+        break;
+
+    case '[':
+        if (esState == ES_IN_ESC_SEQ1)
+        {
+            esState = ES_IN_ESC_SEQ2;
+        }
+        else
+        {
+            esState = ret = ES_NONE;
+        }
+        break;
+
+    case 'A':
+        if (esState == ES_IN_ESC_SEQ2)
+        {
+            esState = ret = ES_CURSOR_UP;
+        }
+        else
+        {
+            esState = ret = ES_NONE;
+        }
+        break;
+
+    case 'B':
+        if (esState == ES_IN_ESC_SEQ2)
+        {
+            esState = ret = ES_CURSOR_DN;
+        }
+        else
+        {
+            esState = ret = ES_NONE;
+        }
+        break;
+
+    default:
+        esState = ret = ES_NONE;
+        break;
+    }
+    return ret;
+}
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C     F U N C T I O N S
@@ -121,7 +198,11 @@ void *RemoveFromList( PortInfo *pPort )
     void *pTemp;
     OS_SETUP_CRITICAL();
 
-    ASF_assert(pPort->pHead != NULL);
+    //ASF_assert(pPort->pHead != NULL);
+    if (pPort->pHead == NULL)
+    {
+        return NULL;
+    }
     OS_ENTER_CRITICAL();
     pTemp = pPort->pHead;
     pPort->pHead = (void *)M_NextBlock(pPort->pHead); //If this is the last element then spHead will now be NULL
@@ -156,7 +237,7 @@ void DebugPortInit( void )
     gDbgUartPort.hUart      = &_UartHandle;
     gDbgUartPort.hDMA       = &_TxDmaHandle;
     gDbgUartPort.UartBaseAddress = 0;   //Not used
-    gDbgUartPort.ValidateInput = ValidInputData;
+    gDbgUartPort.ValidateInput = NULL;
     /* Note functions can be empty but not NULL (coz we dont' check for null) */
     gDbgUartPort.EnableDMAChannel = EnableDbgUartDMAChannel;
     gDbgUartPort.EnableDMATxRequest = EnableDbgUartDMATxRequest;
@@ -168,6 +249,7 @@ void DebugPortInit( void )
  * @fn      RxBytesToBuff
  *          This function receives bytes into the RX buffer.  It is called from the receive ISR
  *
+ * @param   pPort UART port data structure pointer
  * @param   byte received byte
  *
  * @return  none
@@ -175,8 +257,9 @@ void DebugPortInit( void )
  ***************************************************************************************************/
 void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
 {
-    uint16_t  left;
+    int32_t  left;
     uint16_t  readIdx, writeIdx;
+    EscSeq_t esState;
 
     /* Snapshot the two index values for local use. */
     readIdx = pPort->rxReadIdx;
@@ -186,34 +269,70 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
     left = readIdx - writeIdx;
     if(readIdx < writeIdx)
     {
-        left += RX_BUFFER_SIZE;
-    } /* Here, ulLeft should be correct (between 0 and RX_BUFFER_SIZE). */
-
-    if ((left > 0) && pPort->ValidateInput(byte))
+        left += RX_BUFFER_SIZE + 1;
+    } /* Here, left should be correct (between 0 and RX_BUFFER_SIZE). */
+    
+    if (byte == TOKEN_BS)
     {
-        pPort->rxBuffer[writeIdx] = byte;
-
-        /* Check if a task is waiting for it. */
-        if (pPort->rcvTask != UNKNOWN_TASK_ID)
+        if (left < RX_BUFFER_SIZE) //at least 1 char in the buffer
         {
-            if (byte == '\r' || byte == '\n')
+            if (_enEcho)
             {
-                osSignalSet( asfTaskHandleTable[pPort->rcvTask].handle, UART_CRLF_RECEIVE );
+                //ser_putchar(TOKEN_BS);
+                D0_printf(DEL_CHAR_W_ECHO);
             }
             else
             {
-                /* Wake up the task. */
-                osSignalSet( asfTaskHandleTable[pPort->rcvTask].handle, UART_CMD_RECEIVE );
+                D0_printf(DEL_CHAR_NO_ECHO);
+            }
+            //ser_putchar(' ');
+            //ser_putchar(TOKEN_BS);
+            //backtrack one byte
+            pPort->rxWriteIdx--;
+        }
+        return;
+    }
+    else if (_enEcho)
+    {
+        //Echo back
+        ser_putchar(byte);
+    }
+
+    /* Check for ANSI escape sequence */
+    esState = CheckAnsiEsc(byte);
+
+    if ((left > 0) && (esState != ES_SKIP))
+    {
+        if (esState == ES_NONE)
+        {
+            pPort->rxBuffer[writeIdx] = byte;
+            writeIdx = (writeIdx + 1) % RX_BUFFER_SIZE;
+
+            /* Check if a task is waiting for it. */
+            if (pPort->rcvTask != UNKNOWN_TASK_ID)
+            {
+                if (byte == '\r' || byte == '\n')
+                {
+                    osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, UART_CRLF_RECEIVE);
+                }
+#if 0 //Not needed for commands that end with CR/LF. Also avoids waking up task for each char received
+                else
+                {
+                    /* Wake up the task. */
+                    osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, UART_CMD_RECEIVE);
+                }
+#endif
             }
         }
-
-        if (writeIdx < RX_BUFFER_SIZE-1)
+        else if (esState == ES_CURSOR_UP)
         {
-            ++writeIdx;
+            osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, EVT_FLAG_CURSOR_UP);
+            return;
         }
-        else
+        else if (esState == ES_CURSOR_DN)
         {
-            writeIdx = 0;
+            osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, EVT_FLAG_CURSOR_DN);
+            return;
         }
     }
 
@@ -231,7 +350,10 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
 void *GetNextBuffer( PortInfo *pPort )
 {
     void *pFreeBuff = RemoveFromList( pPort );
-    ASF_assert( osPoolFree( pPort->pBuffPool, pFreeBuff ) == osOK ); //Free the current consumed buffer
+    if (pFreeBuff != NULL)
+    {
+        ASF_assert(osPoolFree(pPort->pBuffPool, pFreeBuff) == osOK); //Free the current consumed buffer
+    }
     return pPort->pHead; //Return the current head of the list
 }
 #endif
@@ -240,6 +362,7 @@ void *GetNextBuffer( PortInfo *pPort )
  * @fn      _dprintf
  *          Helper function that replaces printf functionality to dump the printf messages on UART
  *
+ * @param   dbgLvl Debug level for the console print output
  * @param   fmt printf style variable length parameters
  *
  * @return  length of the string printed.
@@ -252,8 +375,6 @@ int _dprintf( uint8_t dbgLvl, const char *fmt, ... )
 #ifdef UART_DMA_ENABLE
     uint16_t len = 0;
     int8_t *pNewBuff, *pPrintBuff;
-#else
-    
 #endif
 
     switch( dbgLvl )
@@ -271,13 +392,15 @@ int _dprintf( uint8_t dbgLvl, const char *fmt, ... )
             va_start( args, fmt );
 
 #ifdef UART_DMA_ENABLE
-            /* Note: Output will be truncated to allowed max size */
             pNewBuff = osPoolAlloc(pPort->pBuffPool);
+# ifdef PRINTF_POOL_EMPTY_ASSERT
             ASF_assert( pNewBuff != NULL );
+# endif
             if (pNewBuff != NULL)
             {
                 pPrintBuff = M_GetBuffStart(pNewBuff);
-                len = vsnprintf( (char*)pPrintBuff, DPRINTF_BUFF_SIZE, fmt, args );
+                /* Note: Output will be truncated to allowed max size */
+                len = vsnprintf((char*)pPrintBuff, DPRINTF_BUFF_SIZE, fmt, args);
 
                 ASF_assert( len > 0 );
 
@@ -287,16 +410,35 @@ int _dprintf( uint8_t dbgLvl, const char *fmt, ... )
             }
             return 0;
 #else
+# error Non DMA printf handling not implemented!
             return 0;
 #endif
     }
 }
 
-/* ISR handler for Uart TX Complete that is enabled by the DMA TC handler */
+
+/****************************************************************************************************
+ * @fn      HAL_UART_TxCpltCallback
+ *          Callback function defined 'weak' in HAL and can be overridden by user. This is invoked by
+ *          HAL_UART_IRQHandler(). For DMA based UART transmit, this function is invoked because the
+ *          USART Transmit Complete Interrupt is enabled as part of DMA transfer complete interrupt
+ *          handling. Compared to the Std.Periph. Driver implementation this implementation has this
+ *          extra interrupt invocation and handling as opposed to just having the DMA TC interrupt
+ *          take care of queuing the next print buffer.
+ *
+ * @param   huart Handle to the USART peripheral
+ *
+ * @return  none
+ *
+ ***************************************************************************************************/
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     void *pNewBuf;
     uint8_t *pPrintBuf;
+#ifdef CONSOLE_PROMPT
+    const char* prompt = CONSOLE_PROMPT;
+    static osp_bool_t wasPrompt = false;
+#endif // CONSOLE_PROMPT
 
     /* Disable Transfer Complete interrupt */
     __HAL_UART_DISABLE_IT(huart, UART_IT_TC);
@@ -309,18 +451,21 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
         /* Get the next buffer going */
         UartTxDMAStart(&gDbgUartPort, pPrintBuf, M_GetBuffLen(pNewBuf));
     }
-}
-
-#if 0 //This is only called if receive is started using HAL_UART_Receive_IT()
-/* ISR handler for Uart RX Complete that is called from HAL_UART_IRQHandler implemented in stm32f7xx_hal_uart.c */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    uint8_t *pTemp = huart->pRxBuffPtr;
-    --pTemp;
-    //D0_printf("%02X ", huart->pRxBuffPtr[-1]);
-    RxBytesToBuff( &gDbgUartPort, *pTemp );
-}
+#ifdef CONSOLE_PROMPT
+    else
+    {
+        if (!wasPrompt)
+        {
+            UartTxDMAStart(&gDbgUartPort, (uint8_t*)prompt, 4);
+            wasPrompt = true;
+        }
+        else
+        {
+            wasPrompt = false;
+        }
+    }
 #endif
+}
 
 
 /*-------------------------------------------------------------------------------------------------*\

@@ -83,8 +83,54 @@
 
 #endif
 
+/* ANSI escape sequences for debug messages */
+#define G_NORM                                  "\x1B[0m"       //Reset Color
+/* 16 Colors (Foreground) */
+#define G_BLACK                                 "\x1B[30m"
+#define G_BLACK_BOLD                            "\x1B[1;30m"
+#define G_RED                                   "\x1B[31m"
+#define G_RED_BOLD                              "\x1B[1;31m"
+#define G_GREEN                                 "\x1B[32m"
+#define G_GREEN_BOLD                            "\x1B[1;32m"
+#define G_YELLOW                                "\x1B[33m"
+#define G_YELLOW_BOLD                           "\x1B[1;33m"
+#define G_BLUE                                  "\x1B[34m"
+#define G_BLUE_BOLD                             "\x1B[1;34m"
+#define G_MAGENTA                               "\x1B[35m"
+#define G_MAGENTA_BOLD                          "\x1B[1;35m"
+#define G_CYAN                                  "\x1B[36m"
+#define G_CYAN_BOLD                             "\x1B[1;36m"
+#define G_WHITE                                 "\x1B[37m"
+#define G_WHITE_BOLD                            "\x1B[1;37m"
+#define G_BOLD                                  "\x1B[1m"
+
+/* Background Colors */
+#define BG_BLACK                                "\x1B[40m"
+#define BG_RED                                  "\x1B[41m"
+#define BG_GREEN                                "\x1B[42m"
+#define BG_YELLOW                               "\x1B[43m"
+#define BG_BLUE                                 "\x1B[44m"
+#define BG_MAGENTA                              "\x1B[45m"
+#define BG_CYAN                                 "\x1B[46m"
+#define BG_WHITE                                "\x1B[47m"
+
+/* Cursor Controls */
+#define CURSOR_UP1                              "\x1B[1A"
+#define CURSOR_UP                               "\x1B[A"
+#define CURSOR_DN                               "\x1B[B"
+#define CURSOR_UP2                              "\x1B[2A"
+#define CURSOR_SAVE_POS                         "\x1B[s"
+#define CURSOR_RESTORE_POS                      "\x1B[u"
+#define ERASE_LINE                              "\x1B[K"
+
 /* Defines for command handler */
-#define COMMAND_LINE_SIZE           32
+#define COMMAND_LINE_SIZE                       32
+//#define CONSOLE_PROMPT                          "\r\n> "
+#define EVT_FLAG_CURSOR_UP                      0x0001
+#define EVT_FLAG_CURSOR_DN                      0x0002
+
+/* Application Event flags */
+#define EVT_FLAG_ANY_EVENT                      0
 
 /*-------------------------------------------------------------------------------------------------*\
  |    T Y P E   D E F I N I T I O N S
@@ -92,11 +138,12 @@
 /* Serial command parser tokens */
 enum ParserTokensTag {
     TOKEN_NULL = 0,
-    TOKEN_1 = 'l',
-    TOKEN_2 = 'o',
-    TOKEN_3 = 'g',
+    TOKEN_1 = 'c',
+    TOKEN_2 = 'm',
+    TOKEN_3 = 'd',
     TOKEN_4 = '=',
     TOKEN_STATS = '\r',
+    TOKEN_BS = 0x08,    //Backspace
     TOKEN_PARAM = 0xAA
 };
 
@@ -122,7 +169,7 @@ typedef struct RtcClockTag
  |    P U B L I C   F U N C T I O N   D E C L A R A T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 /* RTC Counter (using TIM2 instead of RTC) */
-int32_t RTC_GetCounter( void );
+uint32_t RTC_GetCounter( void );
 
 #endif /* MAIN_H */
 /*-------------------------------------------------------------------------------------------------*\
