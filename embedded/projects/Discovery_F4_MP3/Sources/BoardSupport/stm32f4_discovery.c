@@ -41,54 +41,54 @@
 
 /** @addtogroup BSP
   * @{
-  */ 
+  */
 
 /** @addtogroup STM32F4_DISCOVERY
   * @{
-  */   
-    
-/** @defgroup STM32F4_DISCOVERY_LOW_LEVEL 
+  */
+
+/** @defgroup STM32F4_DISCOVERY_LOW_LEVEL
   * @brief This file provides set of firmware functions to manage Leds and push-button
   *        available on STM32F4-Discovery Kit from STMicroelectronics.
   * @{
-  */ 
+  */
 
 /** @defgroup STM32F4_DISCOVERY_LOW_LEVEL_Private_TypesDefinitions
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup STM32F4_DISCOVERY_LOW_LEVEL_Private_Defines
   * @{
   */
-  
+
 
 
 /** @defgroup STM32F4_DISCOVERY_LOW_LEVEL_Private_Macros
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup STM32F4_DISCOVERY_LOW_LEVEL_Private_Variables
   * @{
-  */ 
-//uint32_t I2cxTimeout = I2Cx_TIMEOUT_MAX;    /*<! Value of Timeout when I2C communication fails */ 
+  */
+//uint32_t I2cxTimeout = I2Cx_TIMEOUT_MAX;    /*<! Value of Timeout when I2C communication fails */
 
 //static I2C_HandleTypeDef    I2cHandle;
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup STM32F4_DISCOVERY_LOW_LEVEL_Private_FunctionPrototypes
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup STM32F4_DISCOVERY_LOW_LEVEL_Private_Functions
   * @{
@@ -112,7 +112,7 @@ uint8_t         AUDIO_IO_Read(uint8_t Addr, uint8_t Reg);
 
 /** @defgroup STM32F4_DISCOVERY_LOW_LEVEL_BUS_Functions
   * @{
-  */ 
+  */
 
 /*******************************************************************************
                             BUS OPERATIONS
@@ -135,7 +135,7 @@ static void I2Cx_Init(void)
     I2cHandle.Init.OwnAddress1 = 0x33;
     I2cHandle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
     I2cHandle.Instance = DISCOVERY_I2Cx;
-      
+
     /* Init the I2C */
     I2Cx_MspInit();
     HAL_I2C_Init(&I2cHandle);
@@ -144,16 +144,16 @@ static void I2Cx_Init(void)
 
 /**
   * @brief  Write a value in a register of the device through BUS.
-  * @param  Addr: Device address on BUS Bus.  
+  * @param  Addr: Device address on BUS Bus.
   * @param  Reg: The target register address to write
-  * @param  Value: The target register value to be written 
+  * @param  Value: The target register value to be written
   * @retval HAL status
   */
 static void I2Cx_WriteData(uint8_t Addr, uint8_t Reg, uint8_t Value)
 {
   HAL_StatusTypeDef status = HAL_OK;
-  
-  status = HAL_I2C_Mem_Write(&I2cHandle, Addr, (uint16_t)Reg, I2C_MEMADD_SIZE_8BIT, &Value, 1, I2cxTimeout); 
+
+  status = HAL_I2C_Mem_Write(&I2cHandle, Addr, (uint16_t)Reg, I2C_MEMADD_SIZE_8BIT, &Value, 1, I2cxTimeout);
 
   /* Check the communication status */
   if(status != HAL_OK)
@@ -165,7 +165,7 @@ static void I2Cx_WriteData(uint8_t Addr, uint8_t Reg, uint8_t Value)
 
 /**
   * @brief  Read a register of the device through BUS
-  * @param  Addr: Device address on BUS  
+  * @param  Addr: Device address on BUS
   * @param  Reg: The target register address to read
   * @retval HAL status
   */
@@ -173,9 +173,9 @@ static uint8_t  I2Cx_ReadData(uint8_t Addr, uint8_t Reg)
 {
   HAL_StatusTypeDef status = HAL_OK;
   uint8_t value = 0;
-  
+
   status = HAL_I2C_Mem_Read(&I2cHandle, Addr, (uint16_t)Reg, I2C_MEMADD_SIZE_8BIT, &value, 1,I2cxTimeout);
-  
+
   /* Check the communication status */
   if(status != HAL_OK)
   {
@@ -194,7 +194,7 @@ static void I2Cx_Error(uint8_t Addr)
 {
   /* De-initialize the I2C communication bus */
   HAL_I2C_DeInit(&I2cHandle);
-  
+
   /* Re-Initialize the I2C communication bus */
   I2Cx_Init();
 }
@@ -212,12 +212,12 @@ static void I2Cx_MspInit(void)
   DISCOVERY_I2Cx_SCL_SDA_GPIO_CLK_ENABLE();
 
   /* DISCOVERY_I2Cx SCL and SDA pins configuration ---------------------------*/
-  GPIO_InitStruct.Pin = DISCOVERY_I2Cx_SCL_PIN | DISCOVERY_I2Cx_SDA_PIN; 
+  GPIO_InitStruct.Pin = DISCOVERY_I2Cx_SCL_PIN | DISCOVERY_I2Cx_SDA_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
   GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   GPIO_InitStruct.Alternate  = DISCOVERY_I2Cx_SCL_SDA_AF;
-  HAL_GPIO_Init(DISCOVERY_I2Cx_SCL_SDA_GPIO_PORT, &GPIO_InitStruct);     
+  HAL_GPIO_Init(DISCOVERY_I2Cx_SCL_SDA_GPIO_PORT, &GPIO_InitStruct);
 
   /* Enable the DISCOVERY_I2Cx peripheral clock */
   DISCOVERY_I2Cx_CLK_ENABLE();
@@ -234,7 +234,7 @@ static void I2Cx_MspInit(void)
 
   /* Enable and set I2Cx Interrupt to the highest priority */
   HAL_NVIC_SetPriority(DISCOVERY_I2Cx_ER_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DISCOVERY_I2Cx_ER_IRQn); 
+  HAL_NVIC_EnableIRQ(DISCOVERY_I2Cx_ER_IRQn);
 }
 #endif
 
@@ -245,34 +245,34 @@ static void I2Cx_MspInit(void)
   * @param  None
   * @retval None
   */
-void AUDIO_IO_Init(void) 
+void AUDIO_IO_Init(void)
 {
   GPIO_InitTypeDef  GPIO_InitStruct;
-  
+
   /* Enable Reset GPIO Clock */
   AUDIO_RESET_GPIO_CLK_ENABLE();
-  
+
   /* Audio reset pin configuration */
-  GPIO_InitStruct.Pin = AUDIO_RESET_PIN; 
+  GPIO_InitStruct.Pin = AUDIO_RESET_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   HAL_GPIO_Init(AUDIO_RESET_GPIO, &GPIO_InitStruct);
-  
+
   //I2Cx_Init();
   I2C_Master_Initialise( I2C_AUDIO_BUS );
-  
+
   /* Power Down the codec */
   HAL_GPIO_WritePin(AUDIO_RESET_GPIO, AUDIO_RESET_PIN, GPIO_PIN_RESET);
-  
+
   /* Wait for a delay to insure registers erasing */
-  ASFTaskSleep(5); 
-  
+  ASFTaskSleep(5);
+
   /* Power on the codec */
   HAL_GPIO_WritePin(AUDIO_RESET_GPIO, AUDIO_RESET_PIN, GPIO_PIN_SET);
-  
+
   /* Wait for a delay to insure registers erasing */
-  ASFTaskSleep(5); 
+  ASFTaskSleep(5);
 }
 
 /**
@@ -282,13 +282,13 @@ void AUDIO_IO_Init(void)
   */
 void AUDIO_IO_DeInit(void)
 {
-  
+
 }
 
 /**
   * @brief  Writes a single data.
   * @param  Addr: I2C address
-  * @param  Reg: Reg address 
+  * @param  Reg: Reg address
   * @param  Value: Data to be written
   * @retval None
   */
@@ -308,7 +308,7 @@ void AUDIO_IO_Write (uint8_t Addr, uint8_t Reg, uint8_t Value)
 /**
   * @brief  Reads a single data.
   * @param  Addr: I2C address
-  * @param  Reg: Reg address 
+  * @param  Reg: Reg address
   * @retval Data to be read
   */
 uint8_t AUDIO_IO_Read(uint8_t Addr, uint8_t Reg)
@@ -330,18 +330,18 @@ uint8_t AUDIO_IO_Read(uint8_t Addr, uint8_t Reg)
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
-  */ 
-    
+  */
+
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
