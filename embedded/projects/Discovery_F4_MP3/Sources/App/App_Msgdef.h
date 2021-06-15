@@ -43,6 +43,7 @@
 
 ASF_MSG_DEF( MSG_APP_EVENT,             MsgGeneric          msgAppEvent         )
 ASF_MSG_DEF( MSG_INT_EVT,               MsgIntEvtInd        msgIntEvtInd        )
+ASF_MSG_DEF( MSG_CLI_CMD,               MsgCliCmd_t         msgCliCmd           )
 
 /*-------------------------------------------------------------------------------------------------*\
  |    E N D   O F   F I L E

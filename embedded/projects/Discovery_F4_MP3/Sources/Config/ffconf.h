@@ -63,6 +63,8 @@
 #define _USE_FORWARD         0      /* 0:Disable or 1:Enable */
 /* To enable f_forward function, set _USE_FORWARD to 1 and set _FS_TINY to 1. */
 
+#define _USE_FIND            1
+
 
 /*-----------------------------------------------------------------------------/
 / Local and Namespace Configurations

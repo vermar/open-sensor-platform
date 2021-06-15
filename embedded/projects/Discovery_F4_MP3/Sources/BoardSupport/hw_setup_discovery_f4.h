@@ -235,9 +235,11 @@ enum _Leds {
 #define I2C_IF_BUS_BASE                         ((U32)I2C1_BASE)
 #define I2C_IF_BUS_CLOCK                        400000  //Fast mode
 #define RCC_Periph_I2C_IF_BUS                   RCC_APB1Periph_I2C1
-#define I2C_IF_CLK_ENABLE()                     __I2C1_CLK_ENABLE()
-#define I2C_IF_FORCE_RESET()                    __I2C1_FORCE_RESET()
-#define I2C_IF_RELEASE_RESET()                  __I2C1_RELEASE_RESET()
+#define I2C_IF_CLK_ENABLE()                     __HAL_RCC_I2C1_CLK_ENABLE()
+#define I2C_IF_FORCE_RESET()                    __HAL_RCC_I2C1_FORCE_RESET()
+#define I2C_IF_RELEASE_RESET()                  __HAL_RCC_I2C1_RELEASE_RESET()
+#define I2C_IF_SDA_GPIO_CLK_ENABLE()            __HAL_RCC_GPIOB_CLK_ENABLE()
+#define I2C_IF_SCL_GPIO_CLK_ENABLE()            __HAL_RCC_GPIOB_CLK_ENABLE() 
 
 /* BUS-IO Pins */
 #define I2C_IF_BUS_GPIO_GRP                     GPIOB

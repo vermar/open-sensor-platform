@@ -46,6 +46,14 @@ typedef struct MsgConsoleDataTag
     uint8_t  deviceId; //Can't really be empty!
 } MsgConsoleData;
 
+typedef struct _MsgCliCmd
+{
+    char        cmd;       /* Command identifier */
+    int32_t     value;     /* Value for the command */
+    int32_t     value2;    /* 2nd Value for the command */
+    int32_t     value3;    /* 3rd Value for the command */
+} MsgCliCmd_t;
+
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/

@@ -120,7 +120,7 @@ void PlatformInitialize( void )
     DebugUARTConfig( DBG_UART_BAUD, UART_WORDLENGTH_8B, UART_STOPBITS_1, UART_PARITY_NONE );
 
     /* Print version number */
-    printf("\r\n### RTX Hello World Application Example for Discovery-F4 board: Date: %s - %s ###\r\n",
+    printf("\r\n### CMSIS-RTX MP3 Player Application Example for Discovery-F4 board: Date: %s - %s ###\r\n",
         __DATE__, __TIME__);
 
     /* Display System clock information */

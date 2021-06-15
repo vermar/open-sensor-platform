@@ -35,6 +35,7 @@ extern AsfTaskHandle asfTaskHandleTable[];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
+#define THIS_TASK_ID                MP3_APP_TASK_ID
 #define f_tell(fp)                  ((fp)->fptr)
 #define ID3_EXT_HDR_FLAG            0x40
 #define BUTTON                      (GPIOA->IDR & GPIO_PIN_0)
@@ -56,6 +57,19 @@ typedef enum
     DISCONNECTION_EVENT = 1,
     CONNECTION_EVENT,
 } MSC_ApplicationTypeDef;
+
+enum _Result
+{
+    INCOMPATIBLE_MP3_FORMAT = -5,
+    AUDIO_INIT_FAIL         = -4,
+    DMA_SYNC_ERROR          = -3,
+    MP3_DECODER_INIT_FAIL   = -2,
+    FILE_IO_ERROR           = -1,
+    CONTINUE_DECODING       = 0,
+    PLAYBACK_STOP           = 1,
+    PLAY_PREVIOUS           = 2,
+    PLAY_NEXT               = 3
+};
 
 /*-------------------------------------------------------------------------------------------------*\
  |    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
@@ -433,9 +447,9 @@ static void SendAppEvent( uint32_t evtId )
  *          Main decoder routine
  *
  ***************************************************************************************************/
-int Mp3Decode(const char* pszFile)
+int32_t Mp3Decode(const char* pszFile)
 {
-    int nResult = 0;
+    int32_t nResult = 0;
     BYTE* pInData = g_Mp3InBuffer;
     UINT unInDataLeft = 0;
     FIL fIn;
@@ -446,22 +460,23 @@ int Mp3Decode(const char* pszFile)
     g_pMp3DmaBufferPtr = g_pMp3DmaBuffer;
     UINT bCodecInitialized = FALSE;
     uint16_t evtFlags;
-    osEvent  ret;
-    int nDecodeRes = ERR_MP3_NONE;
+    //osEvent  ret;
+    int32_t nDecodeRes = ERR_MP3_NONE;
     UINT unFramesDecoded = 0;
+    static uint8_t _volumeSet = HP_VOL_LEVEL;
 
     FRESULT errFS = f_open(&fIn, pszFile, FA_OPEN_EXISTING | FA_READ);
     if(errFS != FR_OK)
     {
         D1_printf("Mp3Decode: Failed to open file \"%s\" for reading, err=%d\r\n", pszFile, errFS);
-        return -1;
+        return FILE_IO_ERROR;
     }
 
     HMP3Decoder hMP3Decoder = MP3InitDecoder();
     if(hMP3Decoder == NULL)
     {
         D1_printf("Mp3Decode: Failed to initialize mp3 decoder engine\r\n");
-        return -2;
+        return MP3_DECODER_INIT_FAIL;
     }
 
     D1_printf("Mp3Decode: Start decoding \"%s\"\r\n", pszFile);
@@ -482,7 +497,7 @@ int Mp3Decode(const char* pszFile)
         }
 
         // find start of next MP3 frame - assume EOF if no sync found
-        int nOffset = MP3FindSyncWord(pInData, unInDataLeft);
+        int32_t nOffset = MP3FindSyncWord(pInData, unInDataLeft);
         if(nOffset < 0)
         {
             bOutOfData = TRUE;
@@ -492,7 +507,7 @@ int Mp3Decode(const char* pszFile)
         unInDataLeft -= nOffset;
 
         // decode one MP3 frame - if offset < 0 then bytesLeft was less than a full frame
-        nDecodeRes = MP3Decode(hMP3Decoder, &pInData, (int*)&unInDataLeft, (short*)g_pMp3OutBuffer, 0);
+        nDecodeRes = MP3Decode(hMP3Decoder, &pInData, (int32_t*)&unInDataLeft, (short*)g_pMp3OutBuffer, 0);
         switch(nDecodeRes)
         {
         case ERR_MP3_NONE:
@@ -505,13 +520,13 @@ int Mp3Decode(const char* pszFile)
                     if((mp3FrameInfo.samprate > 48000) || (mp3FrameInfo.bitsPerSample != 16) || (mp3FrameInfo.nChans < 1) || (mp3FrameInfo.nChans > 2))
                     {
                         D1_printf("Mp3Decode: incompatible MP3 file.\r\n");
-                        nResult = -5;
+                        nResult = INCOMPATIBLE_MP3_FORMAT;
                         break;
                     }
                     // Duplicate data in case of mono to maintain playback speed [CHECK!! - increased playback speed]
                     if (mp3FrameInfo.nChans == 1)
                     {
-                        for(int i = (mp3FrameInfo.outputSamps-1); i >= 0; i--)
+                        for(int32_t i = (mp3FrameInfo.outputSamps-1); i >= 0; i--)
                         {
                             g_pMp3OutBuffer[2 * i]     = g_pMp3OutBuffer[i];
                             g_pMp3OutBuffer[2 * i + 1] = g_pMp3OutBuffer[i];
@@ -561,16 +576,17 @@ int Mp3Decode(const char* pszFile)
                     }
                     if(unDmaBufferSpace == 0)
                     {
+                        MessageBuffer* rcvMsg = NULLP;
                         // DMA buffer full
                         // see if this was the first run
                         if(unDmaBufMode == 0)
                         {
                             // on the first buffer fill up,
                             // start the DMA transfer
-                            if(BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_HEADPHONE, HP_VOL_LEVEL, (uint32_t)mp3FrameInfo.samprate))
+                            if(BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_HEADPHONE, _volumeSet, (uint32_t)mp3FrameInfo.samprate))
                             {
                                 D1_printf("Mp3Decode: audio init failed\r\n");
-                                nResult = -4;
+                                nResult = AUDIO_INIT_FAIL;
                                 break;
                             }
                             bCodecInitialized = TRUE;
@@ -581,57 +597,112 @@ int Mp3Decode(const char* pszFile)
                         //result = os_evt_wait_or( DMA_EVT_HALF_TRANSFER | DMA_EVT_FULL_TRANSFER | APP_EVT_STOP_REQUEST, OS_WAIT_FOREVER );
                         //ASF_assert( result == OS_R_EVT );
                         //evFlags = os_evt_get();
-                        evtFlags = 0;
-                        ret = osSignalWait( 0, osWaitForever ); //0 => Any signal will resume thread
-                        if (ret.status == osEventSignal)
+                        ASFReceiveMessage(THIS_TASK_ID, &rcvMsg);
+                        /* Check if message or event */
+                        if (rcvMsg->msgId < MSG_ID_START)
                         {
-                            evtFlags = ret.value.signals;
-                        }
+                            evtFlags = rcvMsg->msgId;
 
-                        if((evtFlags & APP_EVT_STOP_REQUEST) || BUTTON)
-                        {
-                            // stop requested
-                            D1_printf("Mp3Decode: Stop requested\r\n");
-                            nResult = 1;
-                            break;
-                        }
-
-                        if((evtFlags & DMA_EVT_HALF_TRANSFER) && (evtFlags & DMA_EVT_FULL_TRANSFER))
-                        {
-                            D1_printf("Mp3Decode: DMA out of sync (HT and TC both set)\r\n");
-                            nResult = -3;
-                            break;
-                        }
-
-                        if(unDmaBufMode == 0 || unDmaBufMode == 2)
-                        {
-                            // the DMA event we expect is "half transfer" (=2)
-                            if(evtFlags & DMA_EVT_HALF_TRANSFER)
+                            if ((evtFlags & APP_EVT_STOP_REQUEST) || BUTTON)
                             {
-                                // set up first half mode
-                                unDmaBufMode = 1;
-                                g_pMp3DmaBufferPtr = g_pMp3DmaBuffer;
+                                // stop requested
+                                D1_printf("Mp3Decode: Stop requested\r\n");
+                                nResult = PLAYBACK_STOP;
+                                break;
+                            }
+
+                            if ((evtFlags & DMA_EVT_HALF_TRANSFER) && (evtFlags & DMA_EVT_FULL_TRANSFER))
+                            {
+                                D1_printf("Mp3Decode: DMA out of sync (HT and TC both set)\r\n");
+                                nResult = DMA_SYNC_ERROR;
+                                break;
+                            }
+
+                            if (unDmaBufMode == 0 || unDmaBufMode == 2)
+                            {
+                                // the DMA event we expect is "half transfer" (=2)
+                                if (evtFlags & DMA_EVT_HALF_TRANSFER)
+                                {
+                                    // set up first half mode
+                                    unDmaBufMode = 1;
+                                    g_pMp3DmaBufferPtr = g_pMp3DmaBuffer;
+                                }
+                                else
+                                {
+                                    D1_printf("Mp3Decode: DMA out of sync (expected HT, got TC)\r\n");
+                                    nResult = DMA_SYNC_ERROR;
+                                    break;
+                                }
                             }
                             else
                             {
-                                D1_printf("Mp3Decode: DMA out of sync (expected HT, got TC)\r\n");
-                                nResult = -3;
-                                break;
+                                // the DMA event we expect is "transfer complete" (=4)
+                                if (evtFlags & DMA_EVT_FULL_TRANSFER)
+                                {
+                                    // set up last half mode
+                                    unDmaBufMode = 2;
+                                    g_pMp3DmaBufferPtr = g_pMp3DmaBuffer + (MP3_DMA_BUFFER_SIZE / 2);
+                                }
+                                else
+                                {
+                                    D1_printf("Mp3Decode: DMA out of sync (expected TC, got HT)\r\n");
+                                    nResult = DMA_SYNC_ERROR;
+                                }
                             }
                         }
                         else
                         {
-                            // the DMA event we expect is "transfer complete" (=4)
-                            if(evtFlags & DMA_EVT_FULL_TRANSFER)
+                            switch (rcvMsg->msgId)
                             {
-                                // set up last half mode
-                                unDmaBufMode = 2;
-                                g_pMp3DmaBufferPtr = g_pMp3DmaBuffer + (MP3_DMA_BUFFER_SIZE / 2);
-                            }
-                            else
-                            {
-                                D1_printf("Mp3Decode: DMA out of sync (expected TC, got HT)\r\n");
-                                nResult = -3;
+                            case MSG_CLI_CMD:
+                                switch (rcvMsg->msg.msgCliCmd.cmd)
+                                {
+                                case 'v':   //Volume Control
+                                    if (rcvMsg->msg.msgCliCmd.value <= 100)
+                                    {
+                                        _volumeSet = rcvMsg->msg.msgCliCmd.value;
+                                        BSP_AUDIO_OUT_SetVolume(_volumeSet);
+                                    }
+                                    break;
+
+                                case 's':   //Skip
+                                    nResult = PLAYBACK_STOP;
+                                    break;
+
+                                case 'p':   //Pause
+                                {
+                                    static uint8_t playPauseToggle = 1;
+                                    if (playPauseToggle)
+                                    {
+                                        D1_printf("Playback PAUSED\r\n");
+                                        BSP_AUDIO_OUT_Pause();
+                                    }
+                                    else
+                                    {
+                                        if (BSP_AUDIO_OUT_Resume() != AUDIO_OK)
+                                        {
+                                            D1_printf("Resume Error!\r\n");
+                                        }
+                                        D1_printf("Playback RESUMED\r\n");
+                                    }
+                                    playPauseToggle ^= 1;
+                                }
+                                break;
+
+                                case 'r':
+                                    /* Stop playback and play previous track */
+                                    nResult = PLAY_PREVIOUS;
+                                    break;
+
+                                default:
+                                    D0_printf(G_RED"Warning! Command Not Recognized!\r\n"G_NORM);
+                                    break;
+                                }
+                                break;
+
+                            default:
+                                D0_printf("Unhandled message ID: %u\r\n", rcvMsg->msgId);
+                                break;
                             }
                         }
                     }
@@ -660,7 +731,7 @@ int Mp3Decode(const char* pszFile)
                 break;
             }
         }
-    } while((!bOutOfData) && (nResult == 0));
+    } while((!bOutOfData) && (nResult == CONTINUE_DECODING));
 
     D1_printf("Mp3Decode: Finished decoding\r\n------------------------------------\r\n\n");
 
@@ -676,13 +747,13 @@ int Mp3Decode(const char* pszFile)
     }
     f_close(&fIn);
 
-    if (nResult == 1)
+    if (nResult == PLAYBACK_STOP)
     {
         while(BUTTON); //Wait for user button release
     }
 
     /* Get rid of any pending flags that might have been posted from ISR */
-    ret = osSignalWait( 0, 50 ); //0 => Any signal will resume thread
+    osSignalWait( 0, 50 ); //0 => Any signal will resume thread
     //result = os_evt_wait_or( DMA_EVT_HALF_TRANSFER | DMA_EVT_FULL_TRANSFER | APP_EVT_STOP_REQUEST, MSEC_TO_TICS(50) );
     //D1_printf("EVT-WAIT result = %d\r\n", result);
     //if ( result == OS_R_EVT )
@@ -694,6 +765,51 @@ int Mp3Decode(const char* pszFile)
     return nResult;
 }
 
+/****************************************************************************************************
+ * @fn      Find Previous
+ *          Finds the previous MP3 file for playing
+ *
+ ***************************************************************************************************/
+static char *FindPrevious(char *path, char *currFn)
+{
+    uint32_t fcount = 1;
+    FRESULT fr;     /* Return value */
+    DIR dj;         /* Directory object */
+    FILINFO fno;    /* File information */
+    static char fn_prev[_MAX_LFN + 1];    /* File information */
+    char* fn;
+#if _USE_LFN //Long File Name option
+    static char lfn[_MAX_LFN + 1];
+    fno.lfname = lfn;
+    fno.lfsize = sizeof(lfn);
+#endif
+
+    //D1_printf("Listing all MP3 files:\r\n");
+    memset(fn_prev, 0, sizeof(fn_prev));
+    fr = f_findfirst(&dj, &fno, path, "*.mp3");  /* Start to search for MP3 files */
+
+    while (fr == FR_OK && fno.fname[0]) {         /* Repeat while an item is found */
+#if _USE_LFN
+        fn = *fno.lfname ? fno.lfname : fno.fname;
+#else
+        fn = fno.fname;
+#endif
+        if (strcmp(fn, currFn) == 0)
+        {
+            break;
+        }
+
+        strncpy(fn_prev, fn, sizeof(fn_prev));
+        fr = f_findnext(&dj, &fno);               /* Search for next item */
+        fcount++;
+    }
+
+    f_closedir(&dj);
+
+    D1_printf("\t[%u]  %s\r\n", fcount, fn_prev);                /* Print the object name */
+
+    return fn_prev;
+}
 
 /****************************************************************************************************
  * @fn      Mp3Play
@@ -702,12 +818,48 @@ int Mp3Decode(const char* pszFile)
  ***************************************************************************************************/
 static void Mp3Play( void )
 {
+#if 0
+    const char* myFile = "01. (Zero Cult) Neokarma.mp3";
+    char* prevFile;
+
+    prevFile = FindPrevious("Music", (char*)myFile);
+
+#if 0
+    uint32_t fcount = 1;
+    FRESULT fr;     /* Return value */
+    DIR dj;         /* Directory object */
+    FILINFO fno;    /* File information */
+    char* fn;
+#if _USE_LFN //Long File Name option
+    static char lfn[_MAX_LFN + 1];
+    fno.lfname = lfn;
+    fno.lfsize = sizeof(lfn);
+#endif
+
+    D1_printf("Listing all MP3 files:\r\n");
+    fr = f_findfirst(&dj, &fno, "Music", "*.mp3");  /* Start to search for MP3 files */
+
+    while (fr == FR_OK && fno.fname[0]) {         /* Repeat while an item is found */
+#if _USE_LFN
+        fn = *fno.lfname ? fno.lfname : fno.fname;
+#else
+        fn = fno.fname;
+#endif
+        D1_printf("\t[%u]  %s\r\n", fcount, fn);                /* Print the object name */
+        fr = f_findnext(&dj, &fno);               /* Search for next item */
+        fcount++;
+    }
+
+    f_closedir(&dj);
+#endif
+#else
     FRESULT res;
     FILINFO fno;
     DIR dir;
     char *fn; /* This function is assuming non-Unicode cfg. */
     char buffer[200];
     char *path = "";
+    int32_t result;
 #if _USE_LFN //Long File Name option
     static char lfn[_MAX_LFN + 1];
     fno.lfname = lfn;
@@ -744,18 +896,29 @@ static void Mp3Play( void )
             }
             else
             { /* It is a file. */
-                sprintf(buffer, "%s/%s", path, fn);
-                //D1_printf("File found: %s\r\n", buffer);
-
-                // Check if it is an mp3 file
-                if (strcmp("mp3", get_filename_ext(buffer)) == 0)
+                do
                 {
-                    Mp3Decode( buffer );
-                }
+                    sprintf(buffer, "%s/%s", path, fn);
+                    //D1_printf("File found: %s\r\n", buffer);
+
+                    // Check if it is an mp3 file
+                    if (strcmp("mp3", get_filename_ext(buffer)) == 0)
+                    {
+                        result = Mp3Decode(buffer);
+                        if (result == PLAY_PREVIOUS)
+                        {
+                            fn = FindPrevious(path, fn);
+                            if (strlen(fn) < 5) /* expect filename length to be at least 5 (e.g. "1.mp3") */
+                            {
+                                result = PLAYBACK_STOP;
+                            }
+                        }
+                    }
+                } while (result == PLAY_PREVIOUS);
             }
         }
     }
-
+#endif
 }
 
 
