@@ -66,7 +66,7 @@
                 </option>
                 <option>
                     <name>OGLastSavedByProductVersion</name>
-                    <state>8.40.1.21529</state>
+                    <state>8.50.4.26131</state>
                 </option>
                 <option>
                     <name>GeneralEnableMisra</name>
@@ -116,7 +116,7 @@
                 </option>
                 <option>
                     <name>GBECoreSlave</name>
-                    <version>27</version>
+                    <version>28</version>
                     <state>39</state>
                 </option>
                 <option>
@@ -133,7 +133,7 @@
                 </option>
                 <option>
                     <name>CoreVariant</name>
-                    <version>27</version>
+                    <version>28</version>
                     <state>39</state>
                 </option>
                 <option>
@@ -156,7 +156,7 @@
                 </option>
                 <option>
                     <name>GFPUCoreSlave2</name>
-                    <version>27</version>
+                    <version>28</version>
                     <state>39</state>
                 </option>
                 <option>
@@ -215,7 +215,7 @@
             <name>ICCARM</name>
             <archiveVersion>2</archiveVersion>
             <data>
-                <version>35</version>
+                <version>36</version>
                 <wantNonLocal>1</wantNonLocal>
                 <debug>1</debug>
                 <option>
@@ -494,6 +494,10 @@
                 <option>
                     <name>OICompilerExtraOption</name>
                     <state>1</state>
+                </option>
+                <option>
+                    <name>CCStackProtection</name>
+                    <state>0</state>
                 </option>
             </data>
         </settings>
@@ -1111,11 +1115,11 @@
                 </option>
                 <option>
                     <name>Input description</name>
-                    <state></state>
+                    <state>Automatic choice of formatter, without multibyte support.</state>
                 </option>
                 <option>
                     <name>Output description</name>
-                    <state></state>
+                    <state>Automatic choice of formatter, without multibyte support.</state>
                 </option>
                 <option>
                     <name>GOutputBinary</name>
@@ -1123,7 +1127,7 @@
                 </option>
                 <option>
                     <name>OGCoreOrChip</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>GRuntimeLibSelect</name>
@@ -1137,7 +1141,7 @@
                 </option>
                 <option>
                     <name>RTDescription</name>
-                    <state></state>
+                    <state>Use the normal configuration of the C/C++ runtime library. No locale interface, C locale, no file descriptor support, no multibytes in printf and scanf, and no hex floats in strtod.</state>
                 </option>
                 <option>
                     <name>OGProductVersion</name>
@@ -1145,7 +1149,7 @@
                 </option>
                 <option>
                     <name>OGLastSavedByProductVersion</name>
-                    <state></state>
+                    <state>8.40.1.21529</state>
                 </option>
                 <option>
                     <name>GeneralEnableMisra</name>
@@ -1157,7 +1161,7 @@
                 </option>
                 <option>
                     <name>OGChipSelectEditMenu</name>
-                    <state></state>
+                    <state>STM32F407VG	ST STM32F407VG</state>
                 </option>
                 <option>
                     <name>GenLowLevelInterface</name>
@@ -1165,7 +1169,7 @@
                 </option>
                 <option>
                     <name>GEndianModeBE</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>OGBufferedTerminalOutput</name>
@@ -1191,12 +1195,12 @@
                 </option>
                 <option>
                     <name>RTConfigPath2</name>
-                    <state></state>
+                    <state>$TOOLKIT_DIR$\inc\c\DLib_Config_Normal.h</state>
                 </option>
                 <option>
                     <name>GBECoreSlave</name>
-                    <version>27</version>
-                    <state>38</state>
+                    <version>28</version>
+                    <state>39</state>
                 </option>
                 <option>
                     <name>OGUseCmsis</name>
@@ -1212,22 +1216,22 @@
                 </option>
                 <option>
                     <name>CoreVariant</name>
-                    <version>27</version>
-                    <state>38</state>
+                    <version>28</version>
+                    <state>39</state>
                 </option>
                 <option>
                     <name>GFPUDeviceSlave</name>
-                    <state>-</state>
+                    <state>STM32F407VG	ST STM32F407VG</state>
                 </option>
                 <option>
                     <name>FPU2</name>
                     <version>0</version>
-                    <state>0</state>
+                    <state>4</state>
                 </option>
                 <option>
                     <name>NrRegs</name>
                     <version>0</version>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>NEON</name>
@@ -1235,8 +1239,8 @@
                 </option>
                 <option>
                     <name>GFPUCoreSlave2</name>
-                    <version>27</version>
-                    <state>38</state>
+                    <version>28</version>
+                    <state>39</state>
                 </option>
                 <option>
                     <name>OGCMSISPackSelectDevice</name>
@@ -1277,7 +1281,7 @@
                 </option>
                 <option>
                     <name>DSPExtension</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>TrustZone</name>
@@ -1294,12 +1298,22 @@
             <name>ICCARM</name>
             <archiveVersion>2</archiveVersion>
             <data>
-                <version>35</version>
+                <version>36</version>
                 <wantNonLocal>1</wantNonLocal>
                 <debug>0</debug>
                 <option>
                     <name>CCDefines</name>
-                    <state>NDEBUG</state>
+                    <state>__FPU_PRESENT=1</state>
+                    <state>__CORTEX_M4F</state>
+                    <state>__CMSIS_RTOS</state>
+                    <state>DEBUG_BUILD</state>
+                    <state>UART_DMA_ENABLE</state>
+                    <state>USE_HAL_DRIVER</state>
+                    <state>STM32F407xx</state>
+                    <state>DISCOVERY_F4_BOARD</state>
+                    <state>ON_DEMAND_PROFILING</state>
+                    <state>ASF_PROFILING</state>
+                    <state>USE_USB_FS</state>
                 </option>
                 <option>
                     <name>CCPreprocFile</name>
@@ -1360,7 +1374,7 @@
                 <option>
                     <name>CCAllowList</name>
                     <version>1</version>
-                    <state>11111110</state>
+                    <state>11111100</state>
                 </option>
                 <option>
                     <name>CCDebugInfo</name>
@@ -1408,7 +1422,7 @@
                 </option>
                 <option>
                     <name>OutputFile</name>
-                    <state></state>
+                    <state>$FILE_BNAME$.o</state>
                 </option>
                 <option>
                     <name>CCLibConfigHeader</name>
@@ -1424,7 +1438,25 @@
                 </option>
                 <option>
                     <name>CCIncludePath2</name>
-                    <state></state>
+                    <state>$PROJ_DIR$\..\Sources\App</state>
+                    <state>$PROJ_DIR$\..\Sources\BoardSupport</state>
+                    <state>$PROJ_DIR$\..\Sources\Config</state>
+                    <state>$PROJ_DIR$\..\..\..\common\app</state>
+                    <state>$PROJ_DIR$\..\..\..\common\asf</state>
+                    <state>$PROJ_DIR$\..\..\..\..\include</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\MCU\STM32F4-CM4\HAL\Inc</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\MCU\CMSIS\Device\ST\STM32F4xx\Include</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\RTOS\CMSIS-RTX\INC</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\MCU\CMSIS\Include</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\ST\STM32_USB_Host_Library\Core\Inc</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\ST\STM32_USB_Host_Library\Class\MSC\Inc</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\Helix\pub</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\Helix\real</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\FatFs\src</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\Middlewares\FatFs\src\drivers</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\RTOS\CMSIS-RTX\INC</state>
+                    <state>$PROJ_DIR$\..\..\..\..\external\RTOS\CMSIS-RTX\SRC</state>
+                    <state>$PROJ_DIR$\..\..\..\common\modules\bus-drivers\STM32F4-CM4</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -1445,11 +1477,11 @@
                 <option>
                     <name>CCOptStrategy</name>
                     <version>0</version>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCOptLevelSlave</name>
-                    <state>1</state>
+                    <state>3</state>
                 </option>
                 <option>
                     <name>CompilerMisraRules98</name>
@@ -1512,7 +1544,7 @@
                 <option>
                     <name>CCOptStrategySlave</name>
                     <version>0</version>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCGuardCalls</name>
@@ -1545,6 +1577,10 @@
                 <option>
                     <name>OICompilerExtraOption</name>
                     <state>1</state>
+                </option>
+                <option>
+                    <name>CCStackProtection</name>
+                    <state>0</state>
                 </option>
             </data>
         </settings>
@@ -1678,7 +1714,7 @@
                 </option>
                 <option>
                     <name>AOutputFile</name>
-                    <state></state>
+                    <state>$FILE_BNAME$.o</state>
                 </option>
                 <option>
                     <name>ALimitErrorsCheck</name>
@@ -1783,7 +1819,7 @@
                 </option>
                 <option>
                     <name>IlinkOutputFile</name>
-                    <state>###Unitialized###</state>
+                    <state>Discovery-F4-MP3.out</state>
                 </option>
                 <option>
                     <name>IlinkDebugInfoEnable</name>
