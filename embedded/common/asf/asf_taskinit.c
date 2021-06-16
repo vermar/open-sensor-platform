@@ -67,6 +67,8 @@ const AsfTaskInitDef C_gAsfTaskInitTable[NUMBER_OF_TASKS] =
  */
 AsfTaskHandle asfTaskHandleTable[NUMBER_OF_TASKS];
 
+uint16_t asfTaskEvent[NUMBER_OF_TASKS];
+
 #ifdef ASF_PROFILING
  /* Reference start time */
  uint32_t gSystemRTCRefTime;
@@ -128,6 +130,9 @@ void InitializeTasks( void )
                 asfTaskHandleTable[tid].QId = osMessageCreate( &C_gAsfTaskInitTable[tid].queue, asfTaskHandleTable[tid].handle );
                 ASF_assert( asfTaskHandleTable[tid].QId != NULL )
             }
+
+            /* Init events */
+            asfTaskHandleTable[tid].events = 0;
         }
     }
 

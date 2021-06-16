@@ -174,6 +174,9 @@ AsfResult_t _ASFSendMessage ( TaskId destTask, MessageBuffer *pMbuf, char *_file
         return ASF_ERR_Q_FULL;
     }
 
+    /* Set signal corresponding to message queue */
+    osSignalSet(asfTaskHandleTable[destTask].handle, 0x8000);
+
     return ASF_OK;
 }
 
@@ -196,14 +199,61 @@ AsfResult_t _ASFSendMessage ( TaskId destTask, MessageBuffer *pMbuf, char *_file
 void _ASFReceiveMessage ( TaskId rcvTask, MessageBuffer **pMbuf, char *_file, int _line )
 {
     osEvent evt;
+    uint16_t evtFlags;
 
     /* Delete old/previous message to release its buffer */
-    _ASFDeleteMessage( pMbuf, _file, _line );
+    if (((*pMbuf) != NULL) && ((*pMbuf)->msgId > MSG_ID_START))
+    {
+        //D0_printf("### Check #1\r\n");
+        _ASFDeleteMessage(pMbuf, _file, _line);
+    }
+
+    /* Wait on event. Message post will also generate an event */
+    evtFlags = 0;
+    evt = osSignalWait(EVT_FLAG_ANY_EVENT, 0);
+Handle_Rcv:
+    if (evt.status == osEventSignal)
+    {
+        //D0_printf("### Check #2 [%u] [%04X]\r\n", rcvTask, evt.value.signals);
+        evtFlags = evt.value.signals;
+        /* Preference given to events first */
+        if ((evtFlags & 0x7FFF) != 0)
+        {
+            /* How to pass event as message? */
+            asfTaskHandleTable[rcvTask].events = evtFlags & 0x7FFF;
+            *pMbuf = (MessageBuffer *)&asfTaskHandleTable[rcvTask].events;
+            //D0_printf("### Event: %04X, Msg: %04X\r\n", asfTaskHandleTable[rcvTask].events, (*pMbuf)->msgId);
+            return;
+        }
+//         else if (evtFlags & 0x8000) //Its a message
+//         {
+//             evt = osMessageGet(asfTaskHandleTable[rcvTask].QId, 0);
+//             if (evt.status == osEventMessage)
+//             {
+//                 *pMbuf = evt.value.p;
+//                 return;
+//             }
+//         }
+    }
+
+    /* Check if there's a message */
+    evt = osMessageGet( asfTaskHandleTable[rcvTask].QId, 0 );
+    if (evt.status == osEventMessage)
+    {
+        *pMbuf = evt.value.p;
+        return;
+    }
+
+    evtFlags = 0;
+    /* Wait for event (forever this time) */
+    evt = osSignalWait(EVT_FLAG_ANY_EVENT, osWaitForever);
+    goto Handle_Rcv;
+
 
     /* Wait for receive */
-    evt = osMessageGet( asfTaskHandleTable[rcvTask].QId, osWaitForever );
-    ASF_assert_var((evt.status == osEventMessage), evt.status, 0, 0);
-    *pMbuf = evt.value.p;
+    //evt = osMessageGet( asfTaskHandleTable[rcvTask].QId, osWaitForever );
+    //ASF_assert_var((evt.status == osEventMessage), evt.status, 0, 0);
+    //*pMbuf = evt.value.p;
 }
 
 

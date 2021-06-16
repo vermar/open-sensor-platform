@@ -23,6 +23,7 @@
 \*-------------------------------------------------------------------------------------------------*/
 #include <stdint.h>
 #include "cmsis_os.h"
+#include "asf_msgstruct.h"
 
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
@@ -37,6 +38,8 @@
 typedef struct AsfTaskHandleTag {
     osThreadId handle;
     osMessageQId QId;
+    uint32_t events;        //Essentially Message ID equivalent
+    //uint16_t events;
 } AsfTaskHandle;
 
 /*

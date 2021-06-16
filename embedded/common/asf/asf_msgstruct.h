@@ -140,10 +140,15 @@ typedef enum AsfResultCodesTag
 /* Message Buffer Definitions */
 typedef enum MessageIdTag
 {
+    EVENT_ID_01 = 1,
+    EVENT_ID_02 = 2,
+    EVENT_ID_04 = 4,
+    EVENT_ID_08 = 8,
+    MSG_ID_START = 0x8000,
     #include "asf_msgdef.h"
 
-    NUM_MSG_ID          ///< Total messages
-
+    NUM_MSG_ID,          ///< Total messages
+    MSG_ID_MAX  = 0x0FFFFFFF    //Ensure 32-bit message id.
 } MessageId;
 
 typedef struct MsgHeaderTag

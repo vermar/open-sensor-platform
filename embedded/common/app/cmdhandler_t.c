@@ -36,6 +36,7 @@ extern void CmdParse_User( int8_t *pBuffer, uint16_t size, uint16_t event );
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
+#define THIS_TASK_ID                    CMD_HNDLR_TASK_ID
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   T Y P E   D E F I N I T I O N S
@@ -60,7 +61,7 @@ static int8_t inputBuffer[COMMAND_LINE_SIZE];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E     F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-
+#if 0
 /****************************************************************************************************
  * @fn      SerialRead
  *          This function reads 'length' bytes and copies the data into memory pointed to by pBuff.
@@ -157,7 +158,7 @@ static ReadStatus_t SerialRead( PortInfo *pPort, int8_t *pBuff, uint16_t length,
 
     return retVal;
 }
-
+#endif
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C     F U N C T I O N S
@@ -176,15 +177,93 @@ static ReadStatus_t SerialRead( PortInfo *pPort, int8_t *pBuff, uint16_t length,
 ASF_TASK void CmdHandlerTask( ASF_TASK_ARG )
 {
     ReadStatus_t retVal;
-    uint16_t bytesRead;
+    uint16_t bytesRead = 0, remaining;
+    MessageBuffer* rcvMsg = NULLP;
+    uint16_t evtFlags = 0;
+    uint16_t readIdx, writeIdx;
+    int8_t* pBuff = inputBuffer;
+    PortInfo* pPort = &gDbgUartPort;
 
     while(1)
     {
-        retVal = SerialRead( &gDbgUartPort, inputBuffer, COMMAND_LINE_SIZE-1, &bytesRead );
-        if (retVal != READ_ERR)
+        ASFReceiveMessage(THIS_TASK_ID, &rcvMsg);
+
+        /* Check if message or event */
+        if (rcvMsg->msgId < MSG_ID_START)
         {
-            CmdParse_User( inputBuffer, bytesRead, (uint16_t)retVal ); //Implemented in application code
+            retVal = READ_ERR;
+            /* This is an event */
+            evtFlags = rcvMsg->msgId;
+
+            if (evtFlags & EVT_FLAG_CURSOR_DN)
+            {
+                retVal = READ_CURSOR_DN;
+            }
+            else if (evtFlags & EVT_FLAG_CURSOR_UP)
+            {
+                retVal = READ_CURSOR_UP;
+            }
+            else
+            {
+                /* Receive on UART */
+                OS_SETUP_CRITICAL();
+                /* Snapshot the read/write index of the receive buffer for local use */
+                OS_ENTER_CRITICAL();
+                readIdx = pPort->rxReadIdx;
+                writeIdx = pPort->rxWriteIdx;
+                OS_LEAVE_CRITICAL();
+
+                /* If the write index is 1 in front of read, the buffer is now empty. */
+                if (writeIdx == ((readIdx + 1) % RX_BUFFER_SIZE))
+                {
+                    continue;
+                }
+                else
+                {
+                    remaining = readIdx > writeIdx ? (writeIdx + RX_BUFFER_SIZE - (readIdx + 1)) : writeIdx - (readIdx + 1);
+                    /* Copy the full command string to given buffer */
+                    while (remaining)
+                    {
+                        readIdx = (readIdx + 1) % RX_BUFFER_SIZE;
+                        pBuff[bytesRead++] = pPort->rxBuffer[readIdx];
+                        remaining--;
+                    }
+                    /* Update the read index in port structure */
+                    OS_ENTER_CRITICAL();
+                    pPort->rxReadIdx = readIdx;
+                    OS_LEAVE_CRITICAL();
+
+                    if ((evtFlags & UART_CRLF_RECEIVE) || (bytesRead >= (COMMAND_LINE_SIZE - 1)))
+                    {
+                        retVal = READ_OK;
+                        //CmdParse_User( inputBuffer, bytesRead, (uint16_t)retVal ); //Implemented in application code
+                    }
+                }
+
+            }
+            if (retVal != READ_ERR)
+            {
+                CmdParse_User(inputBuffer, bytesRead, (uint16_t)retVal); //Implemented in application code
+                pBuff = inputBuffer; //Reset buffer pointer
+                bytesRead = 0;
+            }
         }
+        else
+        {
+            switch (rcvMsg->msgId)
+            {
+            default:
+                D0_printf("Unhandled message ID: %u\r\n", rcvMsg->msgId);
+                break;
+            }
+        }
+
+
+//         retVal = SerialRead(&gDbgUartPort, inputBuffer, COMMAND_LINE_SIZE - 1, &bytesRead);
+//         if (retVal != READ_ERR)
+//         {
+//             CmdParse_User( inputBuffer, bytesRead, (uint16_t)retVal ); //Implemented in application code
+//         }
     }
 }
 
