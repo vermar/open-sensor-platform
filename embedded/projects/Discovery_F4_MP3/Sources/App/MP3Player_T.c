@@ -507,7 +507,7 @@ int32_t Mp3Decode(const char* pszFile)
         unInDataLeft -= nOffset;
 
         // decode one MP3 frame - if offset < 0 then bytesLeft was less than a full frame
-        nDecodeRes = MP3Decode(hMP3Decoder, &pInData, (int32_t*)&unInDataLeft, (short*)g_pMp3OutBuffer, 0);
+        nDecodeRes = MP3Decode(hMP3Decoder, &pInData, (int*)&unInDataLeft, (short*)g_pMp3OutBuffer, 0);
         switch(nDecodeRes)
         {
         case ERR_MP3_NONE:

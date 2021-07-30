@@ -28,7 +28,11 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+#ifdef __GNUC__
+int __io_putchar(int ch);
+#else
 int32_t ser_putchar (int32_t c);
+#endif
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
@@ -295,7 +299,11 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
     else if (_enEcho)
     {
         //Echo back
+#ifdef __GNUC__
+        __io_putchar(byte);
+#else
         ser_putchar(byte);
+#endif
     }
 
     /* Check for ANSI escape sequence */

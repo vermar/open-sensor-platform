@@ -348,25 +348,6 @@ void SystemInterruptConfig( void );
 void DebugUARTConfig( uint32_t baud, uint32_t dataLen, uint32_t stopBits, uint32_t parity );
 void LED_Init( void );
 
-/****************************************************************************************************
- * @fn      GetContext
- *          Identifies if we are currently in ISR or Thread context and returns the corresponding
- *          enum value for it. The logic is based on the fact that ISR uses system stack and Thread
- *          use their allocated stack. We only need to read the current value of SP to figure out
- *          whether we are in a Thread or ISR. (Maybe there is a better way... but this is good
- *          enough for now)
- *
- * @param   none
- *
- * @return  CTX_THREAD or CTX_ISR
- *
- ***************************************************************************************************/
-static __inline MsgContext GetContext( void )
-{
-    return (__get_IPSR() != 0U)? CTX_ISR : CTX_THREAD;
-}
-
-
 
 #endif /* HW_SETUP_DISCO_F4_H */
 /*-------------------------------------------------------------------------------------------------*\

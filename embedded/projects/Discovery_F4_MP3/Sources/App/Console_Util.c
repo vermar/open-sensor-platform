@@ -138,7 +138,7 @@ void CmdParse_User( int8_t *pBuffer, uint16_t size, uint16_t event )
             histCnt--;
             histReadIdx = (histReadIdx + 1) % CMD_HISTORY_SZ;
             pHistCmd = (histReadIdx != _newCmdIdx)? CmdHistory[histReadIdx] : NULL;
-            D0_printf("\r" ERASE_LINE "%s", pHistCmd ? pHistCmd : "");
+            D0_printf("\r" ERASE_LINE "%s", pHistCmd ? (char*)pHistCmd : "");
         }
         return;
     }
@@ -178,7 +178,7 @@ void CmdParse_User( int8_t *pBuffer, uint16_t size, uint16_t event )
         histReadIdx = -1;
         pHistCmd = NULL;
 #if 1
-        numScanned = sscanf((char*)pBuffer, "cmd=%c,%d,%d,%d", &cliCmd.cmd, &cliCmd.value, &cliCmd.value2,
+        numScanned = sscanf((char*)pBuffer, "cmd=%c,%ld,%ld,%ld", &cliCmd.cmd, &cliCmd.value, &cliCmd.value2,
             &cliCmd.value3);
         if ((numScanned > 0) && (numScanned <= 4))
         {
