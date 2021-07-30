@@ -25,16 +25,16 @@
 #if defined (__GNUC__)
 /* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
 set to 'Yes') calls __io_putchar() */
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#define PUTCHAR_PROTOTYPE int32_t __io_putchar(int32_t ch)
 #elif defined (__CC_ARM)
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#define PUTCHAR_PROTOTYPE int32_t fputc(int32_t ch, FILE *f)
 #endif /* __GNUC__ */
 
 #if defined (__GNUC__) || defined (__CC_ARM)
-int ser_putchar (int c);
-int ser_getchar (void);
+int32_t ser_putchar (int32_t c);
+int32_t ser_getchar (void);
 
-struct __FILE { int handle; /* Add whatever you need here */ };
+struct __FILE { int32_t handle; /* Add whatever you need here */ };
 FILE __stdout;
 FILE __stdin;
 
@@ -44,40 +44,40 @@ PUTCHAR_PROTOTYPE
     return (ser_putchar(ch));
 }
 
-int fgetc (FILE *f)         { return (ser_getchar()); }
+int32_t fgetc (FILE *f)         { return (ser_getchar()); }
 
 
-int ferror(FILE *f) {
+int32_t ferror(FILE *f) {
     /* Your implementation of ferror */
     return EOF;
 }
 
 
-void _ttywrch(int ch)       { ser_putchar(ch); }
+void _ttywrch(int32_t ch)       { ser_putchar(ch); }
 
 
-void _sys_exit(int return_code) {
+void _sys_exit(int32_t return_code) {
 label:  goto label;  /* endless loop */
 }
+#endif
 
 /*----------------------------------------------------------------------------
  Write character to Serial Port (blocking)
  *----------------------------------------------------------------------------*/
-int ser_putchar (int c) {
+int32_t ser_putchar (int32_t c) {
 
     while(!DbgUartTransmitBufferEmpty());
     DbgUartSendByte((uint8_t)c);
     return (c);
 }
-#endif
 
 /*----------------------------------------------------------------------------
  Read character from Serial Port   (blocking read)
  *----------------------------------------------------------------------------*/
-int ser_getchar (void) {
+int32_t ser_getchar (void) {
 
     while (!DbgUartReceiveBufferFull());
-    return ((int)DbgUartReadByte());
+    return ((int32_t)DbgUartReadByte());
 }
 
 #if defined (__ICCARM__)
@@ -90,8 +90,8 @@ int ser_getchar (void) {
 /* Return values */
 #define _LLIO_ERROR ((size_t)-1) /* For __read and __write. */
 
-size_t __write(int Handle, const unsigned char * Buf, size_t Bufsize);
-size_t __read(int handle, unsigned char * buffer, size_t size);
+size_t __write(int32_t Handle, const uint8_t * Buf, size_t Bufsize);
+size_t __read(int32_t handle, uint8_t * buffer, size_t size);
 /*************************************************************************
  * Function Name: __write
  * Parameters: Low Level cahracter output
@@ -101,15 +101,14 @@ size_t __read(int handle, unsigned char * buffer, size_t size);
  * Description:
  *
  *************************************************************************/
-size_t __write(int Handle, const unsigned char * Buf, size_t Bufsize)
+size_t __write(int32_t Handle, const uint8_t * Buf, size_t Bufsize)
 {
     size_t nChars = 0;
 
     for (/*Empty */; Bufsize > 0; --Bufsize)
     {
         /* Loop until the end of transmission */
-        while(!DbgUartTransmitBufferEmpty());
-        DbgUartSendByte((uint8_t)*Buf++);
+        ser_putchar((int32_t)*Buf++);
         ++nChars;
     }
     return nChars;
@@ -123,9 +122,9 @@ size_t __write(int Handle, const unsigned char * Buf, size_t Bufsize)
  * Description:
  *
  *************************************************************************/
-size_t __read(int handle, unsigned char * buffer, size_t size)
+size_t __read(int32_t handle, uint8_t * buffer, size_t size)
 {
-    int nChars = 0;
+    int32_t nChars = 0;
 
     /* This template only reads from "standard in", for all other file
      * handles it returns failure. */
@@ -136,7 +135,7 @@ size_t __read(int handle, unsigned char * buffer, size_t size)
 
     for (/* Empty */; size > 0; --size)
     {
-        int c = ser_getchar();
+        int32_t c = ser_getchar();
         if (c < 0)
             break;
 
