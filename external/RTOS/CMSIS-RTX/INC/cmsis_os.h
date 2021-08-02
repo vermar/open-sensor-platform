@@ -21,7 +21,7 @@
  * Version 1.02
  *    Control functions for short timeouts in microsecond resolution:
  *    Added: osKernelSysTick, osKernelSysTickFrequency, osKernelSysTickMicroSec
- *    Removed: osSignalGet 
+ *    Removed: osSignalGet
  *----------------------------------------------------------------------------
  *
  * Copyright (c) 2013-2017 ARM LIMITED. All rights reserved.
@@ -65,18 +65,6 @@
 #define os_InRegs __value_in_regs      // Compiler specific: force struct in registers
 #else
 #define os_InRegs
-#endif
-
-#if   defined(__CC_ARM)
-#define __NO_RETURN __declspec(noreturn)
-#elif defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
-#define __NO_RETURN __attribute__((noreturn))
-#elif defined(__GNUC__)
-#define __NO_RETURN __attribute__((noreturn))
-#elif defined(__ICCARM__)
-#define __NO_RETURN __noreturn
-#else
-#define __NO_RETURN
 #endif
 
 #include <stdint.h>
@@ -244,7 +232,7 @@ extern uint16_t const os_tickus_f;
 /// \endcond
 
 /// Get the RTOS kernel system timer counter.
-/// \return RTOS kernel system timer as 32-bit value 
+/// \return RTOS kernel system timer as 32-bit value
 uint32_t osKernelSysTick (void);
 
 /// The RTOS kernel system timer frequency in Hz.
@@ -663,11 +651,11 @@ uint32_t os_suspend (void);
 void os_resume (uint32_t sleep_time);
 
 /// OS idle demon (running when no other thread is ready to run).
-__NO_RETURN void os_idle_demon (void);
+void os_idle_demon (void);
 
 /// OS error callback (called when a runtime error is detected).
 /// \param[in]     error_code    actual error code that has been detected.
-__NO_RETURN void os_error (uint32_t error_code);
+void os_error (uint32_t error_code);
 
 
 #ifdef  __cplusplus
