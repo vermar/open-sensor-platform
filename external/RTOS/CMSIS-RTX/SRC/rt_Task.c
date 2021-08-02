@@ -67,7 +67,7 @@ static OS_TID rt_get_TID (void) {
 
 static void rt_init_context (P_TCB p_TCB, U8 priority, FUNCP task_body) {
   /* Initialize general part of the Task Control Block. */
-  p_TCB->cb_type   = TCB;
+  p_TCB->cb_type   = RTX_TCB;
   p_TCB->state     = READY;
   p_TCB->prio      = priority;
   p_TCB->prio_base = priority;
@@ -405,10 +405,10 @@ void rt_sys_init (FUNCP first_task, U32 prio_stksz, void *stk) {
   rt_init_context (&os_idle_TCB, 0U, os_idle_demon);
 
   /* Set up ready list: initially empty */
-  os_rdy.cb_type = HCB;
+  os_rdy.cb_type = RTX_HCB;
   os_rdy.p_lnk   = NULL;
   /* Set up delay list: initially empty */
-  os_dly.cb_type = HCB;
+  os_dly.cb_type = RTX_HCB;
   os_dly.p_dlnk  = NULL;
   os_dly.p_blnk  = NULL;
   os_dly.delta_time = 0U;

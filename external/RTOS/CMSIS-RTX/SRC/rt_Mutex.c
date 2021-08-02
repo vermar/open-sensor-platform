@@ -42,7 +42,7 @@ void rt_mut_init (OS_ID mutex) {
   /* Initialize a mutex object */
   P_MUCB p_MCB = mutex;
 
-  p_MCB->cb_type = MUCB;
+  p_MCB->cb_type = RTX_MUCB;
   p_MCB->level   = 0U;
   p_MCB->p_lnk   = NULL;
   p_MCB->owner   = NULL;

@@ -26,11 +26,11 @@
 /* Definitions */
 
 /* Values for 'cb_type' */
-#define TCB             0U
-#define MCB             1U
-#define SCB             2U
-#define MUCB            3U
-#define HCB             4U
+#define RTX_TCB         0U
+#define RTX_MCB         1U
+#define RTX_SCB         2U
+#define RTX_MUCB        3U
+#define RTX_HCB         4U
 
 /* Variables */
 extern struct OS_XCB os_rdy;

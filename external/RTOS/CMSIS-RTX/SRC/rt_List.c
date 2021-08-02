@@ -56,7 +56,7 @@ void rt_put_prio (P_XCB p_CB, P_TCB p_task) {
   U32 prio;
   BOOL sem_mbx = __FALSE;
 
-  if ((p_CB->cb_type == SCB) || (p_CB->cb_type == MCB) || (p_CB->cb_type == MUCB)) {
+  if ((p_CB->cb_type == RTX_SCB) || (p_CB->cb_type == RTX_MCB) || (p_CB->cb_type == RTX_MUCB)) {
     sem_mbx = __TRUE;
   }
   prio = p_task->prio;
@@ -90,7 +90,7 @@ P_TCB rt_get_first (P_XCB p_CB) {
 
   p_first = p_CB->p_lnk;
   p_CB->p_lnk = p_first->p_lnk;
-  if ((p_CB->cb_type == SCB) || (p_CB->cb_type == MCB) || (p_CB->cb_type == MUCB)) {
+  if ((p_CB->cb_type == RTX_SCB) || (p_CB->cb_type == RTX_MCB) || (p_CB->cb_type == RTX_MUCB)) {
     if (p_first->p_lnk != NULL) {
       p_first->p_lnk->p_rlnk = (P_TCB)p_CB;
       p_first->p_lnk = NULL;
@@ -146,7 +146,7 @@ void rt_resort_prio (P_TCB p_task) {
   }
   else {
     p_CB = p_task->p_rlnk;
-    while (p_CB->cb_type == TCB) {
+    while (p_CB->cb_type == RTX_TCB) {
       /* Find a header of this task chain list. */
       p_CB = p_CB->p_rlnk;
     }

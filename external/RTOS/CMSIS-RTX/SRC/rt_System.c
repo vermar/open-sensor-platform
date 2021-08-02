@@ -220,11 +220,11 @@ void rt_pop_req (void) {
   idx = os_psq->last;
   while (os_psq->count) {
     p_CB = os_psq->q[idx].id;
-    if (p_CB->cb_type == TCB) {
+    if (p_CB->cb_type == RTX_TCB) {
       /* Is of TCB type */
       rt_evt_psh ((P_TCB)p_CB, (U16)os_psq->q[idx].arg);
     }
-    else if (p_CB->cb_type == MCB) {
+    else if (p_CB->cb_type == RTX_MCB) {
       /* Is of MCB type */
       rt_mbx_psh ((P_MCB)p_CB, (void *)os_psq->q[idx].arg);
     }

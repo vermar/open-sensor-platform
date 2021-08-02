@@ -269,7 +269,9 @@ static inline  t __##f (t1 a1, t2 a2, t3 a3, t4 a4) {                          \
 
 #elif defined (__ICCARM__)      /* IAR Compiler */
 
-#define __NO_RETURN __noreturn
+#ifndef __NO_RETURN
+# define __NO_RETURN __noreturn
+#endif
 
 #define RET_osEvent        "=r"(ret.status), "=r"(ret.value), "=r"(ret.def)
 #define RET_osCallback     "=r"(ret.fp), "=r"(ret.arg)
@@ -445,7 +447,7 @@ static P_TCB rt_tid2ptcb (osThreadId thread_id) {
 
   ptcb = thread_id;
 
-  if (ptcb->cb_type != TCB) { return NULL; }
+  if (ptcb->cb_type != RTX_TCB) { return NULL; }
 
   return ptcb;
 }
@@ -1453,7 +1455,7 @@ osStatus svcMutexWait (osMutexId mutex_id, uint32_t millisec) {
     return osErrorParameter;
   }
 
-  if (((P_MUCB)mut)->cb_type != MUCB) {
+  if (((P_MUCB)mut)->cb_type != RTX_MUCB) {
     return osErrorParameter;
   }
 
@@ -1479,7 +1481,7 @@ osStatus svcMutexRelease (osMutexId mutex_id) {
     return osErrorParameter;
   }
 
-  if (((P_MUCB)mut)->cb_type != MUCB) {
+  if (((P_MUCB)mut)->cb_type != RTX_MUCB) {
     return osErrorParameter;
   }
 
@@ -1501,7 +1503,7 @@ osStatus svcMutexDelete (osMutexId mutex_id) {
     return osErrorParameter;
   }
 
-  if (((P_MUCB)mut)->cb_type != MUCB) {
+  if (((P_MUCB)mut)->cb_type != RTX_MUCB) {
     return osErrorParameter;
   }
 
@@ -1601,7 +1603,7 @@ int32_t svcSemaphoreWait (osSemaphoreId semaphore_id, uint32_t millisec) {
     return -1;
   }
 
-  if (((P_SCB)sem)->cb_type != SCB) {
+  if (((P_SCB)sem)->cb_type != RTX_SCB) {
     return -1;
   }
 
@@ -1621,7 +1623,7 @@ osStatus svcSemaphoreRelease (osSemaphoreId semaphore_id) {
     return osErrorParameter;
   }
 
-  if (((P_SCB)sem)->cb_type != SCB) {
+  if (((P_SCB)sem)->cb_type != RTX_SCB) {
     return osErrorParameter;
   }
 
@@ -1643,7 +1645,7 @@ osStatus svcSemaphoreDelete (osSemaphoreId semaphore_id) {
     return osErrorParameter;
   }
 
-  if (((P_SCB)sem)->cb_type != SCB) {
+  if (((P_SCB)sem)->cb_type != RTX_SCB) {
     return osErrorParameter;
   }
 
@@ -1664,7 +1666,7 @@ osStatus isrSemaphoreRelease (osSemaphoreId semaphore_id) {
     return osErrorParameter;
   }
 
-  if (((P_SCB)sem)->cb_type != SCB) {
+  if (((P_SCB)sem)->cb_type != RTX_SCB) {
     return osErrorParameter;
   }
 
@@ -1877,7 +1879,7 @@ osStatus svcMessagePut (osMessageQId queue_id, uint32_t info, uint32_t millisec)
     return osErrorParameter;
   }
 
-  if (((P_MCB)queue_id)->cb_type != MCB) {
+  if (((P_MCB)queue_id)->cb_type != RTX_MCB) {
     return osErrorParameter;
   }
 
@@ -1900,7 +1902,7 @@ os_InRegs osEvent_type svcMessageGet (osMessageQId queue_id, uint32_t millisec) 
     return osEvent_ret_status;
   }
 
-  if (((P_MCB)queue_id)->cb_type != MCB) {
+  if (((P_MCB)queue_id)->cb_type != RTX_MCB) {
     ret.status = osErrorParameter;
     return osEvent_ret_status;
   }
@@ -1927,7 +1929,7 @@ osStatus isrMessagePut (osMessageQId queue_id, uint32_t info, uint32_t millisec)
     return osErrorParameter;
   }
 
-  if (((P_MCB)queue_id)->cb_type != MCB) {
+  if (((P_MCB)queue_id)->cb_type != RTX_MCB) {
     return osErrorParameter;
   }
 
@@ -1950,7 +1952,7 @@ os_InRegs osEvent isrMessageGet (osMessageQId queue_id, uint32_t millisec) {
     return ret;
   }
 
-  if (((P_MCB)queue_id)->cb_type != MCB) {
+  if (((P_MCB)queue_id)->cb_type != RTX_MCB) {
     ret.status = osErrorParameter;
     return ret;
   }

@@ -44,7 +44,7 @@ void rt_mbx_init (OS_ID mailbox, U16 mbx_size) {
   /* Initialize a mailbox */
   P_MCB p_MCB = mailbox;
 
-  p_MCB->cb_type = MCB;
+  p_MCB->cb_type = RTX_MCB;
   p_MCB->state   = 0U;
   p_MCB->isr_st  = 0U;
   p_MCB->p_lnk   = NULL;

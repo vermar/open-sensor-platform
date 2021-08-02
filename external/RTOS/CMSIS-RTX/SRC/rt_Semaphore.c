@@ -43,7 +43,7 @@ void rt_sem_init (OS_ID semaphore, U16 token_count) {
   /* Initialize a semaphore */
   P_SCB p_SCB = semaphore;
 
-  p_SCB->cb_type = SCB;
+  p_SCB->cb_type = RTX_SCB;
   p_SCB->p_lnk  = NULL;
   p_SCB->tokens = token_count;
 }
