@@ -118,12 +118,23 @@ static uint32_t HighWaterMarkSearch( uint32_t start, uint32_t end )
 }
 
 
+/*-------------------------------------------------------------------------------------------------*\
+ |    P U B L I C     F U N C T I O N S
+\*-------------------------------------------------------------------------------------------------*/
+
 /****************************************************************************************************
  * @fn      DoProfiling
  *          Calculates and prints CPU/Stack profiling information
  *
+ * @param   withStartEnd Enable Start/End address print for stack
+ * @param   pExtBuff When not NULL this returns the stack print in a buffer
+ * @param   bufSz Size of the external buffer supplied. Typically requires few hundred bytes and
+ *          depends on the number of tasks in the system. Smaller buffer will truncate the info
+ *
+ * @return  Number of bytes printed in the buffer if external buffer was supplied; 0 otherwise
+ *
  ***************************************************************************************************/
-static void DoProfiling( osp_bool_t withStartEnd )
+int32_t DoProfiling( osp_bool_t withStartEnd, char *pExtBuff, uint32_t bufSz )
 {
     uint8_t  taskCounter, numTasks;
     uint32_t start, end, highWater, size;
@@ -132,6 +143,7 @@ static void DoProfiling( osp_bool_t withStartEnd )
     P_TCB tskPtr;
     uint8_t *pTaskList;
     TaskId tid;
+    int32_t nPrinted = 0;
 
 
     numTasks = GetTaskList( &pTaskList );
@@ -161,7 +173,12 @@ static void DoProfiling( osp_bool_t withStartEnd )
     i_printf("%02d ***\r\n\n", (highWater * 100)/size);
 
 # else
-    i_printf("\r\n------------------------------------------------------\r\n");
+    if (pExtBuff && (bufSz > nPrinted)) {
+        nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "\r\n------------------------------------------------------\r\n");
+    }
+    else {
+        i_printf("\r\n------------------------------------------------------\r\n");
+    }
     totalElapsedTime = RTC_GetCounter() - gSystemRTCRefTime;
     for (taskCounter = 0; taskCounter < numTasks; taskCounter++)
     {
@@ -179,9 +196,16 @@ static void DoProfiling( osp_bool_t withStartEnd )
                 C_gAsfTaskInitTable[tid].tDef.stacksize,
                 (highWater * 100)/C_gAsfTaskInitTable[tid].tDef.stacksize, taskLoad, tskPtr->runCount);
         } else {
-            i_printf("%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", C_gAsfTaskInitTable[tid].tskName, highWater,
-                C_gAsfTaskInitTable[tid].tDef.stacksize,
-                (highWater * 100)/C_gAsfTaskInitTable[tid].tDef.stacksize, taskLoad, tskPtr->runCount);
+            if (pExtBuff && (bufSz > nPrinted)) {
+                nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", C_gAsfTaskInitTable[tid].tskName, highWater,
+                    C_gAsfTaskInitTable[tid].tDef.stacksize,
+                    (highWater * 100) / C_gAsfTaskInitTable[tid].tDef.stacksize, taskLoad, tskPtr->runCount);
+            }
+            else {
+                i_printf("%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", C_gAsfTaskInitTable[tid].tskName, highWater,
+                    C_gAsfTaskInitTable[tid].tDef.stacksize,
+                    (highWater * 100) / C_gAsfTaskInitTable[tid].tDef.stacksize, taskLoad, tskPtr->runCount);
+            }
         }
 #  ifdef ON_DEMAND_PROFILING
         /* Reset (only for CPU usage) runtime for next profiling period */
@@ -204,8 +228,14 @@ static void DoProfiling( osp_bool_t withStartEnd )
         i_printf("%16s: %08x/%08x %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", "IDLE TASK", start, end, highWater,
             C_gIdleStkSize, (highWater * 100)/C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
     } else {
-        i_printf("%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", "IDLE TASK", highWater,
-            C_gIdleStkSize, (highWater * 100)/C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
+        if (pExtBuff && (bufSz > nPrinted)) {
+            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", "IDLE TASK", highWater,
+                C_gIdleStkSize, (highWater * 100) / C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
+        }
+        else {
+            i_printf("%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", "IDLE TASK", highWater,
+                C_gIdleStkSize, (highWater * 100) / C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
+        }
     }
     /* Main stack check */
 #  ifdef __ICCARM__
@@ -222,19 +252,25 @@ static void DoProfiling( osp_bool_t withStartEnd )
         i_printf("%16s: %08x/%08x %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", start, end, highWater,
             size, (highWater * 100)/size);
     } else {
-        i_printf("%16s: %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", highWater,
-            size, (highWater * 100)/size);
+        if (pExtBuff && (bufSz > nPrinted)) {
+            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", highWater,
+                size, (highWater * 100) / size);
+        }
+        else {
+            i_printf("%16s: %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", highWater,
+                size, (highWater * 100) / size);
+        }
     }
-    i_printf("------------------------------------------------------\r\n");
+    if (pExtBuff && (bufSz > nPrinted)) {
+        nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "------------------------------------------------------\r\n");
+    }
+    else {
+        i_printf("------------------------------------------------------\r\n");
+    }
 # endif
-
+    return nPrinted;
 }
 #endif //ASF_PROFILING
-
-
-/*-------------------------------------------------------------------------------------------------*\
- |    P U B L I C     F U N C T I O N S
-\*-------------------------------------------------------------------------------------------------*/
 
 /****************************************************************************************************
  * @fn      InstrManagerTask
@@ -291,7 +327,7 @@ ASF_TASK void InstrManagerTask( ASF_TASK_ARG )
 #if defined ON_DEMAND_PROFILING && defined ASF_PROFILING
             case MSG_PROFILING_REQ:
                 //DoProfiling(true); /* Enable this if Stack addresses are needed */
-                DoProfiling(false);
+                DoProfiling(false, NULLP, 0);
                 break;
 #endif
 
