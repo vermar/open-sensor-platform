@@ -36,27 +36,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-typedef unsigned   char    u8_t;
-typedef signed     char    s8_t;
-typedef unsigned   short   u16_t;
-typedef signed     short   s16_t;
-typedef unsigned   long    u32_t;
-typedef signed     long    s32_t;
-typedef u32_t mem_ptr_t;
 typedef int sys_prot_t;
 
+#define LWIP_PROVIDE_ERRNO
 
-#define U16_F "hu"
-#define S16_F "d"
-#define X16_F "hx"
-#define U32_F "u"
-#define S32_F "d"
-#define X32_F "x"
-#define SZT_F "uz" 
+#if defined (__GNUC__) & !defined (__CC_ARM)
 
+#define LWIP_TIMEVAL_PRIVATE 0
+#include <sys/time.h>
 
-
-
+#endif
 
 /* define compiler specific symbols */
 #if defined (__ICCARM__)
@@ -67,17 +56,17 @@ typedef int sys_prot_t;
 #define PACK_STRUCT_FIELD(x) x
 #define PACK_STRUCT_USE_INCLUDES
 
-#elif defined (__CC_ARM)
-
-#define PACK_STRUCT_BEGIN __packed
-#define PACK_STRUCT_STRUCT 
-#define PACK_STRUCT_END
-#define PACK_STRUCT_FIELD(x) x
-
 #elif defined (__GNUC__)
 
 #define PACK_STRUCT_BEGIN
 #define PACK_STRUCT_STRUCT __attribute__ ((__packed__))
+#define PACK_STRUCT_END
+#define PACK_STRUCT_FIELD(x) x
+
+#elif defined (__CC_ARM)
+
+#define PACK_STRUCT_BEGIN __packed
+#define PACK_STRUCT_STRUCT
 #define PACK_STRUCT_END
 #define PACK_STRUCT_FIELD(x) x
 
@@ -90,7 +79,19 @@ typedef int sys_prot_t;
 
 #endif
 
-#define LWIP_PLATFORM_ASSERT(x) do {printf("Assertion \"%s\" failed at line %d in %s\n", \
+#ifdef ASF_CMSIS_RTX
+# define LWIP_PLATFORM_ASSERT(x)    ASF_assert_msg(0, x)
+
+# define LWIP_PLATFORM_DIAG(x)      \
+    do {                            \
+        D0_printf x;                \
+    } while(0)
+#else
+# define LWIP_PLATFORM_ASSERT(x) do {printf("Assertion \"%s\" failed at line %d in %s\n", \
                                      x, __LINE__, __FILE__); } while(0)
+#endif
+
+/* Define random number generator function */
+#define LWIP_RAND() ((u32_t)rand())
 
 #endif /* __CC_H__ */
