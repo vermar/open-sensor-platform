@@ -135,7 +135,9 @@ static __inline   t __##f (t1 a1, t2 a2, t3 a3, t4 a4) {                       \
 
 #elif defined (__GNUC__)        /* GNU Compiler */
 
+#ifndef __NO_RETURN
 #define __NO_RETURN __attribute__((noreturn))
+#endif
 
 typedef uint32_t __attribute__((vector_size(8)))  ret64;
 typedef uint32_t __attribute__((vector_size(16))) ret128;
@@ -476,7 +478,10 @@ uint8_t os_running;                             // Kernel Running flag
 #ifdef ASF_PROFILING
 extern uint32_t gStackMem;
 extern uint32_t gStackSize;
+extern uint32_t gHeapStart;
+extern uint32_t gHeapSize;
 const char C_gStackPattern[8] __attribute__((aligned (4))) = "FREESTAK";
+const char C_gHeapPattern[8] __attribute__((aligned (8))) = "EMTYHEAP";
 #endif
 
 // Kernel Control Service Calls declarations
@@ -498,12 +503,17 @@ osStatus svcKernelInitialize (void) {
 # ifdef __ICCARM__
   register uint32_t *pStack = (uint32_t *)gStackMem;
   register uint32_t stkSize = gStackSize;
+  register uint64_t* pHeap = (uint64_t*)gHeapStart;
+  register uint32_t heapSize = gHeapSize;
 # else /* GCC or Keil compiler */
   register uint32_t *pStack = (uint32_t *)&gStackMem;
   register uint32_t stkSize = (uint32_t)&gStackSize;
+  register uint64_t *pHeap = (uint64_t *)&gHeapStart;
+  register uint32_t heapSize = (uint32_t)&gHeapSize;
 # endif
   register uint32_t idx;
 #endif
+#define SYS_STACK_SKIP_SZ       128     /* GCC Debug builds can be "fat" on stack usage */
 
   if (os_initialized == 0U) {
 
@@ -513,12 +523,24 @@ osStatus svcKernelInitialize (void) {
 #ifdef ASF_PROFILING
     /* >RKV< This is the best place to initialize stack area for idle task and user tasks with
        known pattern that will be used to check for stack usage */
-    /* --- System Stack --- */
-    /* This call is using the same stack that we are trying to initialize so we leave the last 32 bytes */
-    for ( idx = 0; idx < ((stkSize-32)/sizeof(C_gStackPattern)); idx++)
+    /* --- Heap Memory --- */
+    if (heapSize > sizeof(C_gHeapPattern))
     {
-        *pStack++ = *((uint32_t *)C_gStackPattern);
-        *pStack++ = *((uint32_t *)(C_gStackPattern+4));
+        for ( idx = 0; idx < (heapSize/sizeof(C_gHeapPattern)); idx++)
+        {
+            *pHeap++ = *((uint64_t *)C_gHeapPattern);
+        }
+    }
+
+    /* --- System Stack --- */
+    /* This call is using the same stack that we are trying to initialize so we leave the last SYS_STACK_SKIP_SZ bytes */
+    if (stkSize > SYS_STACK_SKIP_SZ)
+    {
+        for ( idx = 0; idx < ((stkSize-SYS_STACK_SKIP_SZ)/sizeof(C_gStackPattern)); idx++)
+        {
+            *pStack++ = *((uint32_t *)C_gStackPattern);
+            *pStack++ = *((uint32_t *)(C_gStackPattern+4));
+        }
     }
 
     /* --- Idle Thread Stack --- */
@@ -668,10 +690,12 @@ uint32_t osKernelSysTick (void) {
 
 
 // ==== Thread Management ====
-
+extern int printf(char *format, ...);
 /// Set Thread Error (for Create functions which return IDs)
 static void sysThreadError (osStatus status) {
-  //printf("SysThreadError; %X\r\n", status);
+    if (status != osOK) {
+        printf("SysThreadError: %X\r\n", status);
+    }
 }
 
 __NO_RETURN void osThreadExit (void);

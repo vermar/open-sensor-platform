@@ -80,7 +80,7 @@ os_set_env:
         MSR     PSP,R0
         LDR     R0,=os_flags
         LDRB    R0,[R0]
-        LSLS    R0,#31
+        LSLS    R0,R0,#31
         ITE     NE
         MOVNE   R0,#0x02                /* Privileged Thread mode, use PSP */
         MOVEQ   R0,#0x03                /* Unprivileged Thread mode, use PSP */
@@ -98,11 +98,11 @@ _alloc_box:
 
         LDR     R12,=rt_alloc_box
         MRS     R3,IPSR
-        LSLS    R3,#24
+        LSLS    R3,R3,#24
         IT      NE
         BXNE    R12
         MRS     R3,CONTROL
-        LSLS    R3,#31
+        LSLS    R3,R3,#31
         IT      EQ
         BXEQ    R12
         SVC     0
@@ -119,11 +119,11 @@ _free_box:
 
         LDR     R12,=rt_free_box
         MRS     R3,IPSR
-        LSLS    R3,#24
+        LSLS    R3,R3,#24
         IT      NE
         BXNE    R12
         MRS     R3,CONTROL
-        LSLS    R3,#31
+        LSLS    R3,R3,#31
         IT      EQ
         BXEQ    R12
         SVC     0

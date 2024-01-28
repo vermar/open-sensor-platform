@@ -651,11 +651,11 @@ uint32_t os_suspend (void);
 void os_resume (uint32_t sleep_time);
 
 /// OS idle demon (running when no other thread is ready to run).
-void os_idle_demon (void);
+__NO_RETURN void os_idle_demon (void);
 
 /// OS error callback (called when a runtime error is detected).
 /// \param[in]     error_code    actual error code that has been detected.
-void os_error (uint32_t error_code);
+__NO_RETURN void os_error (uint32_t error_code);
 
 
 #ifdef  __cplusplus

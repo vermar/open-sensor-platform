@@ -32,8 +32,6 @@
 #elif defined (__GNUC__)
 #pragma GCC optimize ("O3")
 #define __USED __attribute__((used))
-#elif defined (__ICCARM__) && !defined (__USED)
-#define __USED __root
 #endif
 
 
@@ -123,17 +121,18 @@ static __inline OS_RESULT os_mut_wait (OS_ID mutex, uint16_t timeout) {
 //#error "Invalid number of concurrent running threads!"
 #endif
 
-#if (OS_PRIVCNT >= OS_TASKCNT)
+#if (OS_PRIVCNT > OS_TASKCNT)
 //#error "Too many threads with user-provided stack size!"
 #endif
 
 #if (OS_TIMERS != 0)
-#define OS_TASK_CNT (OS_TASKCNT + 1)
-#define OS_PRIV_CNT (OS_PRIVCNT + 2)
+#define OS_TASK_CNT (OS_TASKCNT + 1) //= Num ASF Tasks + 1 for Timer
+#define OS_PRIV_CNT (OS_PRIVCNT + 0) //= Num ASF Tasks (incl. main task)
+/* Note: For ASF OS_MAINSTKSIZE=0 as it picks up the Instrumentation task stack size */
 #define OS_STACK_SZ (4*(OS_PRIVSTKSIZE+OS_MAINSTKSIZE+OS_TIMERSTKSZ))
 #else
 #define OS_TASK_CNT  OS_TASKCNT
-#define OS_PRIV_CNT (OS_PRIVCNT + 1)
+#define OS_PRIV_CNT  OS_PRIVCNT
 #define OS_STACK_SZ (4*(OS_PRIVSTKSIZE+OS_MAINSTKSIZE))
 #endif
 
@@ -181,7 +180,7 @@ uint16_t const mp_tcb_size = sizeof(mp_tcb);
 /* Memory pool for System stack allocation (+os_idle_demon). */
 extern
 uint64_t       mp_stk[];
-_declare_box8 (mp_stk, OS_STKSIZE*4, OS_TASK_CNT-OS_PRIV_CNT+1);
+_declare_box8 (mp_stk, OS_STKSIZE*4, OS_TASK_CNT-OS_PRIV_CNT+1); //Note: for ASF this will be always =1
 extern
 uint32_t const mp_stk_size;
 uint32_t const mp_stk_size = sizeof(mp_stk);
@@ -189,7 +188,9 @@ uint32_t const mp_stk_size = sizeof(mp_stk);
 /* Memory pool for user specified stack allocation (+main, +timer) */
 extern
 uint64_t       os_stack_mem[];
-uint64_t       os_stack_mem[2+OS_PRIV_CNT+(OS_STACK_SZ/8)];
+/* Note: Memory pool adds sizeof(MEMP) (=sizeof(uint64_t)) overhead for each allocation so that needs to be set aside
+ * as well. Add 1 to that for pool overhead */
+uint64_t       os_stack_mem[OS_TASK_CNT+1+((OS_STACK_SZ+7)/8)];
 extern
 uint32_t const os_stack_sz;
 uint32_t const os_stack_sz = sizeof(os_stack_mem);
