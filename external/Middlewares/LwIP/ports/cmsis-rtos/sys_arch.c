@@ -27,6 +27,7 @@
  * This file is part of the lwIP TCP/IP stack.
  *
  * Author: Adam Dunkels <adam@sics.se>
+ * Author: Rajiv Verma <vermar@users.noreply.github.com>
  *
  */
 
@@ -342,3 +343,67 @@ void sys_init()
 #endif
 #endif /* !NO_SYS */
 }
+
+#if LWIP_TCPIP_CORE_LOCKING
+static osThreadId lwip_core_lock_holder_thread_id;
+extern sys_mutex_t lock_tcpip_core;
+static u8_t lwip_core_lock_count;
+void sys_lock_tcpip_core(void)
+{
+    sys_mutex_lock(&lock_tcpip_core);
+    if (lwip_core_lock_count == 0)
+    {
+        lwip_core_lock_holder_thread_id = osThreadGetId();
+    }
+    lwip_core_lock_count++;
+}
+
+void sys_unlock_tcpip_core(void)
+{
+    lwip_core_lock_count--;
+    if (lwip_core_lock_count == 0)
+    {
+        lwip_core_lock_holder_thread_id = 0;
+    }
+    sys_mutex_unlock(&lock_tcpip_core);
+}
+#endif /* LWIP_TCPIP_CORE_LOCKING */
+
+static osThreadId lwip_tcpip_thread_id;
+void sys_mark_tcpip_thread(void)
+{
+    lwip_tcpip_thread_id = osThreadGetId();
+}
+
+extern char* GetThisTaskName(osThreadId tid);
+void sys_check_core_locking(char* module, uint32_t line)
+{
+    OS_SETUP_CRITICAL();
+
+    /* Assert that we are NOT in an interrupt context here */
+    ASF_assert_msg(__get_IPSR() == 0U, "LwIP Function called from ISR");
+
+    if (lwip_tcpip_thread_id != 0)
+    {
+        osThreadId current_thread_id = osThreadGetId();
+
+        OS_ENTER_CRITICAL();
+        if (lwip_core_lock_holder_thread_id == 0)
+        {
+            char* thisTask = GetThisTaskName(current_thread_id);
+            Dx_printf(G_RED"Core not locked! ('%s': %s [%u])\r\n"G_NORM, thisTask, module, line);
+        }
+        else
+        {
+            if ((current_thread_id != lwip_core_lock_holder_thread_id) || (lwip_core_lock_count == 0))
+            {
+                char* thisTask = GetThisTaskName(current_thread_id);
+                char* lockTask = GetThisTaskName(lwip_core_lock_holder_thread_id);
+                Dx_printf(G_RED"Core lock mismatch: %s [%u], Curr: %s, Lock: %s\r\n"G_NORM, module, line, thisTask, lockTask);
+            }
+        }
+        OS_LEAVE_CRITICAL();
+    }
+}
+
+

@@ -2,25 +2,43 @@
   ******************************************************************************
   * @file    LwIP/LwIP_HTTP_Server_Netconn_RTOS/Inc/lwipopts.h
   * @author  MCD Application Team
-  * @version V1.0.0
-  * @date    18-November-2015
   * @brief   lwIP Options Configuration.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2016 STMicroelectronics International N.V.
+  * All rights reserved.</center></h2>
   *
-  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
-  * You may not use this file except in compliance with the License.
-  * You may obtain a copy of the License at:
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted, provided that the following conditions are met:
   *
-  *        http://www.st.com/software_license_agreement_liberty_v2
+  * 1. Redistribution of source code must retain the above copyright notice,
+  *    this list of conditions and the following disclaimer.
+  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  *    this list of conditions and the following disclaimer in the documentation
+  *    and/or other materials provided with the distribution.
+  * 3. Neither the name of STMicroelectronics nor the names of other
+  *    contributors to this software may be used to endorse or promote products
+  *    derived from this software without specific written permission.
+  * 4. This software, including modifications and/or derivative works of this
+  *    software, must execute solely and exclusively on microcontroller or
+  *    microprocessor devices manufactured by or for STMicroelectronics.
+  * 5. Redistribution and use of this software other than as permitted under
+  *    this license is void and will automatically terminate your rights under
+  *    this license.
   *
-  * Unless required by applicable law or agreed to in writing, software
-  * distributed under the License is distributed on an "AS IS" BASIS,
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
+  * THIS SOFTWARE IS PROVIDED BY STMICROELECTRONICS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS, IMPLIED OR STATUTORY WARRANTIES, INCLUDING, BUT NOT
+  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  * PARTICULAR PURPOSE AND NON-INFRINGEMENT OF THIRD PARTY INTELLECTUAL PROPERTY
+  * RIGHTS ARE DISCLAIMED TO THE FULLEST EXTENT PERMITTED BY LAW. IN NO EVENT
+  * SHALL STMICROELECTRONICS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+  * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
   */
@@ -30,17 +48,14 @@
 
 #include "common.h"
 
-/**
- * SYS_LIGHTWEIGHT_PROT==1: if you want inter-task protection for certain
- * critical regions during buffer allocation, deallocation and memory
- * allocation and deallocation.
- */
-#define SYS_LIGHTWEIGHT_PROT    0
-
-#define ETHARP_TRUST_IP_MAC     0
-#define IP_REASSEMBLY           0
-#define IP_FRAG                 0
-#define ARP_QUEUEING            0
+/*
+   ---------------------------------
+   -------Compiler options ---------
+   ---------------------------------
+*/
+#if (__GNUC__ >= 10)
+# define LWIP_ERRNO_STDINCLUDE
+#endif
 
 /**
  * NO_SYS==1: Provides VERY minimal functionality. Otherwise,
@@ -49,6 +64,8 @@
 #define NO_SYS                  0
 
 /* ---------- Memory options ---------- */
+//#define MEMP_DEBUG              LWIP_DBG_ON
+
 /* MEM_ALIGNMENT: should be set to the alignment of the CPU for which
    lwIP is compiled. 4 byte alignment -> define MEM_ALIGNMENT to 4, 2
    byte alignment -> define MEM_ALIGNMENT to 2. */
@@ -61,11 +78,11 @@ a lot of data that needs to be copied, this should be set high. */
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
-#define MEMP_NUM_PBUF           100
+#define MEMP_NUM_PBUF           30
 /* MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One
    per active UDP "connection". */
 #define MEMP_NUM_UDP_PCB        6
-/* MEMP_NUM_TCP_PCB: the number of simulatenously active TCP
+/* MEMP_NUM_TCP_PCB: the number of simultaneously active TCP
    connections. */
 #define MEMP_NUM_TCP_PCB        10
 /* MEMP_NUM_TCP_PCB_LISTEN: the number of listening TCP
@@ -74,7 +91,7 @@ a lot of data that needs to be copied, this should be set high. */
 /* MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP
    segments. */
 #define MEMP_NUM_TCP_SEG        12
-/* MEMP_NUM_SYS_TIMEOUT: the number of simulateously active
+/* MEMP_NUM_SYS_TIMEOUT: the number of simultaneously active
    timeouts. */
 #define MEMP_NUM_SYS_TIMEOUT    10
 
@@ -86,6 +103,8 @@ a lot of data that needs to be copied, this should be set high. */
 /* PBUF_POOL_BUFSIZE: the size of each pbuf in the pbuf pool. */
 #define PBUF_POOL_BUFSIZE       1524
 
+/* ---------- IPv4 options ---------- */
+#define LWIP_IPV4                1
 
 /* ---------- TCP options ---------- */
 #define LWIP_TCP                1
@@ -96,7 +115,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define TCP_QUEUE_OOSEQ         0
 
 /* TCP Maximum segment size. */
-#define TCP_MSS                 (1500 - 40)	  /* TCP_MSS = (Ethernet MTU - IP header size - TCP header size) */
+#define TCP_MSS                 (1500 - 40)     /* TCP_MSS = (Ethernet MTU - IP header size - TCP header size) */
 
 /* TCP sender buffer space (bytes). */
 #define TCP_SND_BUF             (4*TCP_MSS)
@@ -104,10 +123,10 @@ a lot of data that needs to be copied, this should be set high. */
 /*  TCP_SND_QUEUELEN: TCP sender buffer space (pbufs). This must be at least
   as much as (2 * TCP_SND_BUF/TCP_MSS) for things to work. */
 
-#define TCP_SND_QUEUELEN        (2* TCP_SND_BUF/TCP_MSS)
+#define TCP_SND_QUEUELEN                (3* TCP_SND_BUF/TCP_MSS)
 
 /* TCP receive window. */
-#define TCP_WND                 (2*TCP_MSS)
+#define TCP_WND                         (2*TCP_MSS)
 
 
 /* ---------- ICMP options ---------- */
@@ -115,20 +134,43 @@ a lot of data that needs to be copied, this should be set high. */
 
 
 /* ---------- DHCP options ---------- */
-/* Define LWIP_DHCP to 1 if you want DHCP configuration of
-   interfaces. DHCP is not implemented in lwIP 0.5.1, however, so
-   turning this on does currently not work. */
-#define LWIP_DHCP               1
+#define LWIP_DHCP                       1
 
 
 /* ---------- UDP options ---------- */
-#define LWIP_UDP                1
-#define UDP_TTL                 255
+#define LWIP_UDP                        1
+#define UDP_TTL                         255
 
+/**
+* SO_REUSE==0: Enable SO_REUSEADDR (socket reuse address) option.
+*/
+#define SO_REUSE                        0
 
 /* ---------- Statistics options ---------- */
-#define LWIP_STATS 0
-#define LWIP_PROVIDE_ERRNO 1
+#define LWIP_STATS                      0
+#define LWIP_STATS_DISPLAY              0
+
+/* With the above two enabled, only enable the ones below that we are interested in */
+#if LWIP_STATS && LWIP_STATS_DISPLAY
+# define MQTT_STATS                     1
+# define LINK_STATS                     0
+# define ETHARP_STATS                   0
+# define IP_STATS                       1
+# define IPFRAG_STATS                   0
+# define ICMP_STATS                     0
+# define IGMP_STATS                     0
+# define UDP_STATS                      1
+# define TCP_STATS                      1
+# define MEM_STATS                      1
+# define MEMP_STATS                     1
+# define SYS_STATS                      0
+# define IP6_STATS                      0
+# define ICMP6_STATS                    0
+# define IP6_FRAG_STATS                 0
+# define MLD6_STATS                     0
+# define ND6_STATS                      0
+# define MIB2_STATS                     0
+#endif
 
 /* ---------- link callback options ---------- */
 /* LWIP_NETIF_LINK_CALLBACK==1: Support a callback function from an interface
@@ -204,13 +246,30 @@ The STM32F7xx allows computing and verifying the IP, UDP, TCP and ICMP checksums
 #define LWIP_SOCKET                     0
 
 /*
+   ------------------------------------
+   ---------- httpd options ----------
+   ------------------------------------
+*/
+/** Set this to 1 to include "fsdata_custom.c" instead of "fsdata.c" for the
+ * file system (to prevent changing the file included in CVS) */
+#define HTTPD_USE_CUSTOM_FSDATA         0
+
+
+/*
    -----------------------------------
    ---------- DEBUG options ----------
    -----------------------------------
 */
 
 #define LWIP_DEBUG                      0
-
+//#define LWIP_PLATFORM_DIAG(x)           do {D0_printf x;} while(0)
+//#define TCP_DEBUG                       LWIP_DBG_ON
+//#define PBUF_DEBUG                      LWIP_DBG_ON
+//#define IP_DEBUG                        LWIP_DBG_ON
+//#define TCPIP_DEBUG                     LWIP_DBG_ON
+//#define TCP_INPUT_DEBUG                 LWIP_DBG_ON
+//#define TCP_OUTPUT_DEBUG                LWIP_DBG_ON
+//#define MQTT_DEBUG                      LWIP_DBG_ON
 
 /*
    ---------------------------------
@@ -220,25 +279,26 @@ The STM32F7xx allows computing and verifying the IP, UDP, TCP and ICMP checksums
 /**
  * LWIP_RAW==0: Application layer does not need raw pcbs
  */
-#define LWIP_RAW                        0
+//#define LWIP_RAW                        0
 
 /*
    ---------------------------------
    ---------- OS options ----------
    ---------------------------------
 */
-#define configMAX_PRIORITIES            osPriorityRealtime
+/* NOTE: Make sure that LWIP_TCPIP_CORE_LOCKING=1 in opt.h file */
+#define LWIP_ASSERT_CORE_LOCKED()       sys_check_core_locking(__MODULE__, __LINE__)
 
-#define TCPIP_THREAD_NAME              "TCP/IP"
-#define TCPIP_THREAD_STACKSIZE          4000
-#define TCPIP_MBOX_SIZE                 5
-#define DEFAULT_UDP_RECVMBOX_SIZE       32
-#define DEFAULT_TCP_RECVMBOX_SIZE       32
-#define DEFAULT_ACCEPTMBOX_SIZE         32
-#define DEFAULT_THREAD_STACKSIZE        500
-#define TCPIP_THREAD_PRIO               (configMAX_PRIORITIES - 2)
-#define LWIP_COMPAT_MUTEX               1
+/** Lock lwIP core mutex (needs @ref LWIP_TCPIP_CORE_LOCKING 1) */
+#define LOCK_TCPIP_CORE()               sys_lock_tcpip_core()
+/** Unlock lwIP core mutex (needs @ref LWIP_TCPIP_CORE_LOCKING 1) */
+#define UNLOCK_TCPIP_CORE()             sys_unlock_tcpip_core()
+#define LWIP_MARK_TCPIP_THREAD()        sys_mark_tcpip_thread()
 
+void sys_check_core_locking(char* module, uint32_t line);
+void sys_lock_tcpip_core(void);
+void sys_unlock_tcpip_core(void);
+void sys_mark_tcpip_thread(void);
 
 
 #endif /* __LWIPOPTS_H__ */
