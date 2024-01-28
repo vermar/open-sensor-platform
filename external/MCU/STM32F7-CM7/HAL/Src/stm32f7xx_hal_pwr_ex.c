@@ -2,8 +2,6 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_pwr_ex.c
   * @author  MCD Application Team
-  * @version V1.0.3
-  * @date    13-November-2015
   * @brief   Extended PWR HAL module driver.
   *          This file provides firmware functions to manage the following 
   *          functionalities of PWR extension peripheral:           
@@ -12,29 +10,13 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */ 
@@ -156,6 +138,10 @@ HAL_StatusTypeDef HAL_PWREx_EnableBkUpReg(void)
 
   /* Enable Backup regulator */
   PWR->CSR1 |= PWR_CSR1_BRE;
+    
+  /* Workaround for the following hardware bug: */
+  /* Id 19: PWR : No STANDBY wake-up when Back-up RAM enabled (ref. Errata Sheet p23) */
+  PWR->CSR1 |= PWR_CSR1_EIWUP;
 
   /* Get tick */
   tickstart = HAL_GetTick();
@@ -163,7 +149,7 @@ HAL_StatusTypeDef HAL_PWREx_EnableBkUpReg(void)
   /* Wait till Backup regulator ready flag is set */  
   while(__HAL_PWR_GET_FLAG(PWR_FLAG_BRR) == RESET)
   {
-    if ((HAL_GetTick() - tickstart ) > PWR_BKPREG_TIMEOUT_VALUE)
+    if((HAL_GetTick() - tickstart ) > PWR_BKPREG_TIMEOUT_VALUE)
     {
       return HAL_TIMEOUT;
     } 
@@ -181,6 +167,10 @@ HAL_StatusTypeDef HAL_PWREx_DisableBkUpReg(void)
   
   /* Disable Backup regulator */
   PWR->CSR1 &= (uint32_t)~((uint32_t)PWR_CSR1_BRE);
+  
+  /* Workaround for the following hardware bug: */
+  /* Id 19: PWR : No STANDBY wake-up when Back-up RAM enabled (ref. Errata Sheet p23) */
+  PWR->CSR1 |= PWR_CSR1_EIWUP;
 
   /* Get tick */
   tickstart = HAL_GetTick();
@@ -188,7 +178,7 @@ HAL_StatusTypeDef HAL_PWREx_DisableBkUpReg(void)
   /* Wait till Backup regulator ready flag is set */  
   while(__HAL_PWR_GET_FLAG(PWR_FLAG_BRR) != RESET)
   {
-    if ((HAL_GetTick() - tickstart ) > PWR_BKPREG_TIMEOUT_VALUE)
+    if((HAL_GetTick() - tickstart ) > PWR_BKPREG_TIMEOUT_VALUE)
     {
       return HAL_TIMEOUT;
     } 
@@ -280,7 +270,7 @@ HAL_StatusTypeDef HAL_PWREx_EnableOverDrive(void)
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_ODRDY))
   {
-    if ((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
+    if((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
     {
       return HAL_TIMEOUT;
     }
@@ -294,7 +284,7 @@ HAL_StatusTypeDef HAL_PWREx_EnableOverDrive(void)
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_ODSWRDY))
   {
-    if ((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
+    if((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
     {
       return HAL_TIMEOUT;
     }
@@ -326,7 +316,7 @@ HAL_StatusTypeDef HAL_PWREx_DisableOverDrive(void)
  
   while(__HAL_PWR_GET_FLAG(PWR_FLAG_ODSWRDY))
   {
-    if ((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
+    if((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
     {
       return HAL_TIMEOUT;
     }
@@ -340,7 +330,7 @@ HAL_StatusTypeDef HAL_PWREx_DisableOverDrive(void)
 
   while(__HAL_PWR_GET_FLAG(PWR_FLAG_ODRDY))
   {
-    if ((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
+    if((HAL_GetTick() - tickstart ) > PWR_OVERDRIVE_TIMEOUT_VALUE)
     {
       return HAL_TIMEOUT;
     }
@@ -374,13 +364,13 @@ HAL_StatusTypeDef HAL_PWREx_DisableOverDrive(void)
   *         By keeping the internal regulator ON during Stop mode, the consumption 
   *         is higher although the startup time is reduced.
   *     
-  * @param  Regulator: specifies the regulator state in STOP mode.
+  * @param  Regulator specifies the regulator state in STOP mode.
   *          This parameter can be one of the following values:
   *            @arg PWR_MAINREGULATOR_UNDERDRIVE_ON:  Main Regulator in under-drive mode 
   *                 and Flash memory in power-down when the device is in Stop under-drive mode
   *            @arg PWR_LOWPOWERREGULATOR_UNDERDRIVE_ON:  Low Power Regulator in under-drive mode 
   *                and Flash memory in power-down when the device is in Stop under-drive mode
-  * @param  STOPEntry: specifies if STOP mode in entered with WFI or WFE instruction.
+  * @param  STOPEntry specifies if STOP mode in entered with WFI or WFE instruction.
   *          This parameter can be one of the following values:
   *            @arg PWR_SLEEPENTRY_WFI: enter STOP mode with WFI instruction
   *            @arg PWR_SLEEPENTRY_WFE: enter STOP mode with WFE instruction
@@ -410,7 +400,7 @@ HAL_StatusTypeDef HAL_PWREx_EnterUnderDriveSTOPMode(uint32_t Regulator, uint8_t 
   /* Wait for UnderDrive mode is ready */
   while(__HAL_PWR_GET_FLAG(PWR_FLAG_UDRDY))
   {
-    if ((HAL_GetTick() - tickstart ) > PWR_UDERDRIVE_TIMEOUT_VALUE)
+    if((HAL_GetTick() - tickstart ) > PWR_UDERDRIVE_TIMEOUT_VALUE)
     {
       return HAL_TIMEOUT;
     }
@@ -431,7 +421,7 @@ HAL_StatusTypeDef HAL_PWREx_EnterUnderDriveSTOPMode(uint32_t Regulator, uint8_t 
   SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
   
   /* Select STOP mode entry --------------------------------------------------*/
-  if (STOPEntry == PWR_SLEEPENTRY_WFI)
+  if(STOPEntry == PWR_SLEEPENTRY_WFI)
   {   
     /* Request Wait For Interrupt */
     __WFI();
@@ -459,7 +449,7 @@ uint32_t HAL_PWREx_GetVoltageRange(void)
 
 /**
   * @brief Configures the main internal regulator output voltage.
-  * @param  VoltageScaling: specifies the regulator output voltage to achieve
+  * @param  VoltageScaling specifies the regulator output voltage to achieve
   *         a tradeoff between performance and power consumption.
   *          This parameter can be one of the following values:
   *            @arg PWR_REGULATOR_VOLTAGE_SCALE1: Regulator voltage output range 1 mode,
@@ -494,7 +484,7 @@ HAL_StatusTypeDef HAL_PWREx_ControlVoltageScaling(uint32_t VoltageScaling)
   __HAL_RCC_PWR_CLK_ENABLE();
 
   /* Check if the PLL is used as system clock or not */
-  if (__HAL_RCC_GET_SYSCLK_SOURCE() != RCC_CFGR_SWS_PLL)
+  if(__HAL_RCC_GET_SYSCLK_SOURCE() != RCC_CFGR_SWS_PLL)
   {
     /* Disable the main PLL */
     __HAL_RCC_PLL_DISABLE();
@@ -504,7 +494,7 @@ HAL_StatusTypeDef HAL_PWREx_ControlVoltageScaling(uint32_t VoltageScaling)
     /* Wait till PLL is disabled */  
     while(__HAL_RCC_GET_FLAG(RCC_FLAG_PLLRDY) != RESET)
     {
-      if ((HAL_GetTick() - tickstart ) > PLL_TIMEOUT_VALUE)
+      if((HAL_GetTick() - tickstart ) > PLL_TIMEOUT_VALUE)
       {
         return HAL_TIMEOUT;
       }
@@ -521,7 +511,7 @@ HAL_StatusTypeDef HAL_PWREx_ControlVoltageScaling(uint32_t VoltageScaling)
     /* Wait till PLL is ready */  
     while(__HAL_RCC_GET_FLAG(RCC_FLAG_PLLRDY) == RESET)
     {
-      if ((HAL_GetTick() - tickstart ) > PLL_TIMEOUT_VALUE)
+      if((HAL_GetTick() - tickstart ) > PLL_TIMEOUT_VALUE)
       {
         return HAL_TIMEOUT;
       } 
@@ -531,7 +521,7 @@ HAL_StatusTypeDef HAL_PWREx_ControlVoltageScaling(uint32_t VoltageScaling)
     tickstart = HAL_GetTick();
     while((__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY) == RESET))
     {
-      if ((HAL_GetTick() - tickstart ) > PWR_VOSRDY_TIMEOUT_VALUE)
+      if((HAL_GetTick() - tickstart ) > PWR_VOSRDY_TIMEOUT_VALUE)
       {
         return HAL_TIMEOUT;
       } 
