@@ -1,8 +1,6 @@
-;/******************** (C) COPYRIGHT 2015 STMicroelectronics ********************
+;/******************** (C) COPYRIGHT 2017 STMicroelectronics ********************
 ;* File Name          : startup_stm32f410tx.s
 ;* Author             : MCD Application Team
-;* Version            : V2.4.2
-;* Date               : 13-November-2015
 ;* Description        : STM32F410Tx devices vector table for EWARM toolchain.
 ;*                      This module performs:
 ;*                      - Set the initial SP
