@@ -24,23 +24,24 @@
 #include "common.h"
 #include "asf_taskstruct.h"
 
-
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 extern const uint16_t C_gIdleStkSize;
-#ifdef __ICCARM__
- #pragma section = "CSTACK"
- uint32_t gStackMem = (uint32_t)__section_begin("CSTACK");
- uint32_t gStackSize = (uint32_t)__section_size("CSTACK");
-#else /* for GCC or Keil CC */
+#if defined (__CC_ARM) || defined (__GNUC__)
  extern uint32_t gStackMem;
  extern uint32_t gStackSize;
+ extern uint32_t gHeapStart;
+ extern uint32_t gHeapSize;
 #endif
 
 extern const AsfTaskInitDef C_gAsfTaskInitTable[NUMBER_OF_TASKS];
 extern uint32_t gSystemRTCRefTime;
 extern struct OS_TCB os_idle_TCB; //RTX internal
+
+#ifdef __CMSIS_RTOS
+ extern P_TCB osThreadId_osTimerThread;
+#endif
 
 extern void InitializeTasks( void );
 extern uint8_t GetTaskList( uint8_t **pTaskList );
@@ -49,6 +50,15 @@ extern void PlatformInitialize( void );
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+#ifdef __ICCARM__
+#pragma section = "CSTACK"
+ const uint32_t gStackMem = (uint32_t)__section_begin("CSTACK");
+ const uint32_t gStackSize = (uint32_t)__section_size("CSTACK");
+ const uint32_t gStackMemTop = (uint32_t)__section_end("CSTACK");
+#pragma section = "HEAP"
+ const uint32_t gHeapStart = (uint32_t)__section_begin("HEAP");
+ const uint32_t gHeapSize = (uint32_t)__section_size("HEAP");
+#endif
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
@@ -58,6 +68,10 @@ extern void PlatformInitialize( void );
 #else
 # define i_printf           D1_printf
 #endif
+
+#define STK_CHK_WRD_1       0x45455246UL    //"EERF" (reverse of "FREE")
+#define STK_CHK_WRD_2       0x4B415453UL    //"KATS"
+#define HEAP_CHK_WORD       0x5041454859544d45   //"PAEHYTME"
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   T Y P E   D E F I N I T I O N S
@@ -102,7 +116,7 @@ static uint32_t HighWaterMarkSearch( uint32_t start, uint32_t end )
         tmp = *((uint32_t*)(currCheck));
 
         /* Check for "FREE" or "STAK" pattern */
-        if ((tmp != 0x45455246) && (tmp != 0x4B415453))
+        if ((tmp != STK_CHK_WRD_1) && (tmp != STK_CHK_WRD_2))
         {
             currEnd = currCheck;
         }
@@ -116,6 +130,120 @@ static uint32_t HighWaterMarkSearch( uint32_t start, uint32_t end )
     }
     return (end - currCheck - sizeof(uint32_t));
 }
+
+# if 0 //V1 of heap check - works but not quite. Heap usage by GCC libraries is not lopsided and can leave
+      //Holes in the area towards end
+/****************************************************************************************************
+ * @fn      HeapSizeCheck
+ *          Detects heap usage based on binary search. (heap was seen to grows from both direction)
+ *
+ ***************************************************************************************************/
+static uint32_t HeapSizeCheck( uint32_t start, uint32_t end )
+{
+    uint32_t currCheck =start;
+    uint32_t currStart = start;
+    uint32_t currEnd = end;
+    uint64_t tmp;
+    uint32_t midStart = 0;
+    uint32_t waterMark;
+
+    /* make sure 64-bit aligned */
+    if (start & (sizeof(uint64_t)-1))
+        return (end-start);
+    if (end & (sizeof(uint64_t)-1))
+        return (end-start);
+
+    /* End towards start search first */
+    while(currStart < currEnd)
+    {
+        currCheck = currStart+((currEnd-currStart)/2);
+
+        /* bias to start, reading 8 bytes at a time and check against the pattern */
+        currCheck = currCheck & ~(sizeof(uint64_t)-1);
+        tmp = *((uint64_t*)(currCheck));
+
+        /* Check for "EMTYHEAP" pattern */
+        if (tmp != HEAP_CHK_WORD)
+        {
+            currEnd = currCheck;
+        }
+        else
+        {
+            currStart = currCheck;
+            midStart = currCheck;
+            /* only case where we wouldn't have made progress, break */
+            if ((currStart + sizeof(uint64_t)) == currEnd)
+                break;
+        }
+    }
+    waterMark = end - currCheck - sizeof(uint64_t);
+
+    currCheck = start;
+    currStart = start;
+    currEnd = midStart;
+    /* Start towards end search */
+    while (currStart < currEnd)
+    {
+        currCheck = currEnd - ((currEnd - currStart) / 2);
+
+        /* bias to end, reading 4 bytes at a time and check against the pattern */
+        currCheck = currCheck & ~(sizeof(uint64_t) - 1);
+        tmp = *((uint64_t*)(currCheck));
+
+        /* Check for "EMTYHEAP" pattern */
+        if (tmp != HEAP_CHK_WORD)
+        {
+            currStart = currCheck;
+            /* only case where we wouldn't have made progress, break */
+            if ((currStart + sizeof(uint64_t)) == currEnd)
+                break;
+        }
+        else
+        {
+            currEnd = currCheck;
+        }
+    }
+    waterMark += currCheck - start;
+    return waterMark;
+}
+
+# else //Slower but hopefully more accurate check for heap usage
+
+/****************************************************************************************************
+ * @fn      HeapSizeCheck
+ *          Detects heap usage based on binary search. (heap was seen to grows from both direction)
+ *
+ ***************************************************************************************************/
+static uint32_t HeapSizeCheck( uint32_t start, uint32_t end )
+{
+    uint32_t currCheck;
+    uint64_t tmp;
+    uint32_t waterMark = 0;
+
+    /* make sure 64-bit aligned */
+    if (start & (sizeof(uint64_t)-1))
+        return (end-start);
+    if (end & (sizeof(uint64_t)-1))
+        return (end-start);
+
+    currCheck = start & ~(sizeof(uint64_t) - 1);
+
+    while (currCheck < end)
+    {
+        /* bias to start, reading 8 bytes at a time and check against the pattern */
+        tmp = *((uint64_t*)currCheck);
+
+        /* Check for "EMTYHEAP" pattern */
+        if (tmp != HEAP_CHK_WORD)
+        {
+            waterMark += sizeof(uint64_t);
+        }
+        currCheck += sizeof(uint64_t);
+    }
+
+    return waterMark;
+}
+#endif
 
 
 /*-------------------------------------------------------------------------------------------------*\
@@ -162,12 +290,11 @@ int32_t DoProfiling( osp_bool_t withStartEnd, char *pExtBuff, uint32_t bufSz )
 #  ifdef __ICCARM__
     start = gStackMem;
     size = gStackSize;
-    end = start + size;
 #  else /* Keil or GCC compilers */
     start = (uint32_t)&gStackMem;
     size = (uint32_t)&gStackSize;
-    end = start + size;
 #  endif
+    end = start + size;
 
     highWater = HighWaterMarkSearch( start, end );
     i_printf("%02d ***\r\n\n", (highWater * 100)/size);
@@ -197,12 +324,12 @@ int32_t DoProfiling( osp_bool_t withStartEnd, char *pExtBuff, uint32_t bufSz )
                 (highWater * 100)/C_gAsfTaskInitTable[tid].tDef.stacksize, taskLoad, tskPtr->runCount);
         } else {
             if (pExtBuff && (bufSz > nPrinted)) {
-                nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", C_gAsfTaskInitTable[tid].tskName, highWater,
+                nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%lu%%\t%.2f%%\t%d\r\n", C_gAsfTaskInitTable[tid].tskName, highWater,
                     C_gAsfTaskInitTable[tid].tDef.stacksize,
                     (highWater * 100) / C_gAsfTaskInitTable[tid].tDef.stacksize, taskLoad, tskPtr->runCount);
             }
             else {
-                i_printf("%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", C_gAsfTaskInitTable[tid].tskName, highWater,
+                i_printf("%16s: %04ld/%04ld\t%lu%%\t%.2f%%\t%d\r\n", C_gAsfTaskInitTable[tid].tskName, highWater,
                     C_gAsfTaskInitTable[tid].tDef.stacksize,
                     (highWater * 100) / C_gAsfTaskInitTable[tid].tDef.stacksize, taskLoad, tskPtr->runCount);
             }
@@ -212,6 +339,38 @@ int32_t DoProfiling( osp_bool_t withStartEnd, char *pExtBuff, uint32_t bufSz )
         tskPtr->cumulativeRunTime = 0;
 #  endif
     }
+
+    /* For TIMER task */
+#  ifdef __CMSIS_RTOS
+    start = (uint32_t)osThreadId_osTimerThread->stack;
+    end = start + osThreadId_osTimerThread->priv_stack;
+    highWater = HighWaterMarkSearch(start, end);
+
+    /* --- CPU load */
+    taskLoad = ((osp_float_t)osThreadId_osTimerThread->cumulativeRunTime * 100.0f) / (osp_float_t)totalElapsedTime;
+#   ifdef ON_DEMAND_PROFILING
+    /* Reset (only for CPU usage) runtime for next profiling period */
+    osThreadId_osTimerThread->cumulativeRunTime = 0;
+#   endif
+    if (withStartEnd) {
+        i_printf("%16s: %08x/%08x %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", "TIMER TASK", start, end, highWater,
+            osThreadId_osTimerThread->priv_stack, (highWater * 100) / osThreadId_osTimerThread->priv_stack, taskLoad,
+            osThreadId_osTimerThread->runCount);
+    }
+    else {
+        if (pExtBuff && (bufSz > nPrinted)) {
+            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04d\t%lu%%\t%.2f%%\t%d\r\n", "TIMER TASK", highWater,
+                osThreadId_osTimerThread->priv_stack, (highWater * 100) / osThreadId_osTimerThread->priv_stack, taskLoad,
+                osThreadId_osTimerThread->runCount);
+        }
+        else {
+            i_printf("%16s: %04ld/%04ld\t%lu%%\t%.2f%%\t%d\r\n", "TIMER TASK", highWater,
+                osThreadId_osTimerThread->priv_stack, (highWater * 100) / osThreadId_osTimerThread->priv_stack, taskLoad,
+                osThreadId_osTimerThread->runCount);
+        }
+    }
+#  endif
+
     /* For IDLE task */
     /* --- Stack check */
     start = (uint32_t)os_idle_TCB.stack;
@@ -229,11 +388,11 @@ int32_t DoProfiling( osp_bool_t withStartEnd, char *pExtBuff, uint32_t bufSz )
             C_gIdleStkSize, (highWater * 100)/C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
     } else {
         if (pExtBuff && (bufSz > nPrinted)) {
-            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", "IDLE TASK", highWater,
+            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04d\t%lu%%\t%.2f%%\t%d\r\n", "IDLE TASK", highWater,
                 C_gIdleStkSize, (highWater * 100) / C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
         }
         else {
-            i_printf("%16s: %04ld/%04ld\t%d%%\t%.2f%%\t%ld\r\n", "IDLE TASK", highWater,
+            i_printf("%16s: %04ld/%04ld\t%lu%%\t%.2f%%\t%d\r\n", "IDLE TASK", highWater,
                 C_gIdleStkSize, (highWater * 100) / C_gIdleStkSize, taskLoad, os_idle_TCB.runCount);
         }
     }
@@ -241,26 +400,50 @@ int32_t DoProfiling( osp_bool_t withStartEnd, char *pExtBuff, uint32_t bufSz )
 #  ifdef __ICCARM__
     start = (uint32_t)gStackMem;
     size = gStackSize;
-    end = start + size;
 #  else /* Keil or GCC compilers */
     start = (uint32_t)&gStackMem;
     size = (uint32_t)&gStackSize;
-    end = start + size;
 #  endif
-    highWater = HighWaterMarkSearch( start, end );
+    end = start + size;
+    highWater = HighWaterMarkSearch(start, end);
     if (withStartEnd) {
         i_printf("%16s: %08x/%08x %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", start, end, highWater,
             size, (highWater * 100)/size);
     } else {
         if (pExtBuff && (bufSz > nPrinted)) {
-            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", highWater,
+            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%lu%%\t -*-\t -*-\r\n", "System Stack", highWater,
                 size, (highWater * 100) / size);
         }
         else {
-            i_printf("%16s: %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Stack", highWater,
+            i_printf("%16s: %04ld/%04ld\t%lu%%\t -*-\t -*-\r\n", "System Stack", highWater,
                 size, (highWater * 100) / size);
         }
     }
+
+    /* Heap check */
+#  ifdef __ICCARM__
+    start = gHeapStart;
+    size = gHeapSize;
+#  else /* Keil or GCC compilers */
+    start = (uint32_t)&gHeapStart;
+    size = (uint32_t)&gHeapSize;
+#  endif
+    end = start + size;
+    highWater = HeapSizeCheck(start, end);
+    if (withStartEnd) {
+        i_printf("%16s: %08x/%08x %04ld/%04ld\t%d%%\t -*-\t -*-\r\n", "System Heap", start, end, highWater,
+            size, (highWater * 100)/size);
+    } else {
+        if (pExtBuff && (bufSz > nPrinted)) {
+            nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "%16s: %04ld/%04ld\t%lu%%\t -*-\t -*-\r\n", "System Heap", highWater,
+                size, (highWater * 100)/size);
+        }
+        else {
+            i_printf("%16s: %04ld/%04ld\t%lu%%\t -*-\t -*-\r\n", "System Heap", highWater,
+                size, (highWater * 100)/size);
+        }
+    }
+
     if (pExtBuff && (bufSz > nPrinted)) {
         nPrinted += snprintf(&pExtBuff[nPrinted], bufSz-nPrinted, "------------------------------------------------------\r\n");
     }
@@ -287,6 +470,7 @@ ASF_TASK void InstrManagerTask( ASF_TASK_ARG )
 {
     MessageBuffer *rcvMsg = NULLP;
     osp_bool_t msgHandled;
+    P_TCB tskPtr;
 
     /* Initialize platform stuff (system hardware resources and debug interface) */
     PlatformInitialize();
@@ -298,13 +482,16 @@ ASF_TASK void InstrManagerTask( ASF_TASK_ARG )
     asfTaskHandleTable[INSTR_MANAGER_TASK_ID].handle = osThreadGetId();
     asfTaskHandleTable[INSTR_MANAGER_TASK_ID].QId = osMessageCreate( &C_gAsfTaskInitTable[INSTR_MANAGER_TASK_ID].queue,
         asfTaskHandleTable[INSTR_MANAGER_TASK_ID].handle );
-    asfTaskHandleTable[INSTR_MANAGER_TASK_ID].events = 0;
     ASF_assert( asfTaskHandleTable[INSTR_MANAGER_TASK_ID].QId != NULL );
 
     /* Create other tasks & OS resources in the system */
     /* Jack up this task's priority temporarily while other threads are created */
     osThreadSetPriority( asfTaskHandleTable[INSTR_MANAGER_TASK_ID].handle, osPriorityRealtime );
     InitializeTasks();
+
+    /* Reset the cumulative run time for the Instrumentation manager */
+    tskPtr = (P_TCB)asfTaskHandleTable[INSTR_MANAGER_TASK_ID].handle;
+    tskPtr->cumulativeRunTime = 0;
 
     /* Return back to the set priority */
     osThreadSetPriority( asfTaskHandleTable[INSTR_MANAGER_TASK_ID].handle,

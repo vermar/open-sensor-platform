@@ -71,7 +71,7 @@ uint16_t asfTaskEvent[NUMBER_OF_TASKS];
 
 #ifdef ASF_PROFILING
  /* Reference start time */
- uint32_t gSystemRTCRefTime;
+ uint32_t gSystemRTCRefTime = 0;
 #endif
 
 /*-------------------------------------------------------------------------------------------------*\
@@ -122,7 +122,7 @@ void InitializeTasks( void )
         if (tid != INSTR_MANAGER_TASK_ID)
         {
             asfTaskHandleTable[tid].handle  = osThreadCreate( &C_gAsfTaskInitTable[tid].tDef, NULL );
-            ASF_assert( asfTaskHandleTable[tid].handle != NULL );
+            ASF_assert_var( asfTaskHandleTable[tid].handle != NULL, tid, taskCounter, 0 );
 
             /* Initialize the associated queue */
             if (asfTaskHandleTable[tid].handle != NULL)
@@ -146,23 +146,6 @@ void InitializeTasks( void )
     gSystemRTCRefTime = RTC_GetCounter();
 #endif
 }
-
-
-/****************************************************************************************************
- * @fn      AsfInitialiseTasks
- *          This function creates all the Tasks (via the initialTask) as defined in the
- *          C_gAsfTaskInitTable and starts the RTX ticking. This function should be the last to be
- *          called from main() as it will not return.
- *
- * @param   none
- *
- * @return  none
- *
- ***************************************************************************************************/
-void AsfInitialiseTasks ( void )
-{
-}
-
 
 /*-------------------------------------------------------------------------------------------------*\
  |    E N D   O F   F I L E

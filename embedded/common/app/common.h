@@ -48,21 +48,24 @@
 #endif
 
 /* Critical Section Locks */
-#if defined (__GNUC__) //TODO Check if there is __get_interrupt_state() equivalent in GCC
-# define OS_SETUP_CRITICAL()
-# define OS_ENTER_CRITICAL()                    __disable_irq()
-# define OS_LEAVE_CRITICAL()                    __enable_irq()
+#if defined (__GNUC__)
+# define OS_SETUP_CRITICAL()                    uint32_t wasMasked
+# define OS_ENTER_CRITICAL()                    wasMasked = __get_PRIMASK(); __disable_irq()
+# define OS_LEAVE_CRITICAL()                    __set_PRIMASK(wasMasked)
 # define DISABLE_GLOBAL_IRQ()                   __disable_irq()
+# define ENABLE_GLOBAL_IRQ()                    __enable_irq()
 #elif defined (__CC_ARM)
 # define OS_SETUP_CRITICAL()                    uint32_t wasMasked
 # define OS_ENTER_CRITICAL()                    wasMasked = (uint32_t)__disable_irq()
 # define OS_LEAVE_CRITICAL()                    if (wasMasked == 0U) {__enable_irq();}
 # define DISABLE_GLOBAL_IRQ()                   __disable_irq()
+# define ENABLE_GLOBAL_IRQ()                    __enable_irq()
 #elif defined (__ICCARM__)
 # define OS_SETUP_CRITICAL()                    __istate_t wasMasked
 # define OS_ENTER_CRITICAL()                    wasMasked = __get_interrupt_state(); __disable_interrupt()
 # define OS_LEAVE_CRITICAL()                    __set_interrupt_state(wasMasked)
 # define DISABLE_GLOBAL_IRQ()                   __disable_interrupt()
+# define ENABLE_GLOBAL_IRQ()                    __enable_interrupt()
 #else
 #error Compiler not supported.
 #endif
@@ -71,57 +74,88 @@
 # define __MODULE__                             (char*)__FUNCTION__
 #endif
 
+/* If application layer didn't define this macro then discard it */
+#if !defined (__log_assert)
+# define __log_assert(buf, n)                   (void)n /* Avoid warning for unused variable */
+#endif
+
 #ifdef DEBUG_BUILD
 # define ERR_LOG_MSG_SZ                         150
 # define ASF_assert( condition )                                                           \
     if (!(condition))                                                                      \
     {                                                                                      \
+        int32_t nChars;                                                                    \
         extern char _errBuff[];                                                            \
         DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
-        snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s]", __MODULE__,            \
+        nChars = snprintf(_errBuff, ERR_LOG_MSG_SZ, "%s(%d) - [%s]", __MODULE__,           \
             __LINE__, #condition);                                                         \
-        printf("%s\r\n", _errBuff);                                                        \
+        __log_assert(_errBuff, nChars);                                                    \
+        printf("ASSERT: %s\r\n", _errBuff);                                                \
         SysRESET();                                                                        \
     }
 
 # define ASF_assert_var( condition, var1, var2, var3 )                                     \
     if (!(condition))                                                                      \
     {                                                                                      \
+        int32_t nChars;                                                                    \
         extern char _errBuff[];                                                            \
         DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
-        snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s], 0x%lX, 0x%lX, 0x%lX",   \
-         __MODULE__, __LINE__, #condition, (uint32_t)var1, (uint32_t)var2, (uint32_t)var3);\
-        printf("%s\r\n", _errBuff);                                                        \
+        nChars = snprintf(_errBuff, ERR_LOG_MSG_SZ, "%s(%d) - [%s], 0x%lX, 0x%lX, 0x%lX",__MODULE__,\
+            __LINE__, #condition, (uint32_t)var1, (uint32_t)var2, (uint32_t)var3);         \
+        __log_assert(_errBuff, nChars);                                                    \
+        printf("ASSERT: %s\r\n", _errBuff);                                                \
+        SysRESET();                                                                        \
+    }
+
+/* Same as 'ASF_assert_var' except that it propagates FILE and LINE reference from the top
+ * level caller to any other ASF-API calls that uses this assert. Currently only used for
+ * ASFTimerStart() related debugging */
+# define ASF_assert_vfl( condition, var1, var2, var3, fn, ln )                             \
+    if (!(condition))                                                                      \
+    {                                                                                      \
+        int32_t nChars;                                                                    \
+        extern char _errBuff[];                                                            \
+        DISABLE_GLOBAL_IRQ();                                                              \
+        AssertIndication();                                                                \
+        FlushUart();                                                                       \
+        nChars = snprintf(_errBuff, ERR_LOG_MSG_SZ, "%s(%d) - [%s], 0x%lX, 0x%lX, 0x%lX",  \
+            fn, ln, #condition, (uint32_t)var1, (uint32_t)var2, (uint32_t)var3);           \
+        __log_assert(_errBuff, nChars);                                                    \
+        printf("ASSERT: %s\r\n", _errBuff);                                                \
         SysRESET();                                                                        \
     }
 
 # define ASF_assert_fatal( condition )                                                     \
     if (!(condition))                                                                      \
     {                                                                                      \
+        int32_t nChars;                                                                    \
         extern char _errBuff[];                                                            \
         DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
-        snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT_FATAL: %s(%d) - [%s]", __MODULE__,      \
+        nChars = snprintf(_errBuff, ERR_LOG_MSG_SZ, "FATAL: %s(%d) - [%s]", __MODULE__,    \
             __LINE__, #condition);                                                         \
-        printf("%s\r\n", _errBuff);                                                        \
+        __log_assert(_errBuff, nChars);                                                    \
+        printf("ASSERT: %s\r\n", _errBuff);                                                \
         SysRESET();                                                                        \
     }
 
 # define ASF_assert_msg( condition, message )                                              \
     if (!(condition))                                                                      \
     {                                                                                      \
+        int32_t nChars;                                                                    \
         extern char _errBuff[];                                                            \
         DISABLE_GLOBAL_IRQ();                                                              \
         AssertIndication();                                                                \
         FlushUart();                                                                       \
-        snprintf(_errBuff, ERR_LOG_MSG_SZ, "ASSERT: %s(%d) - [%s], MSG:%.100s",            \
+        nChars = snprintf(_errBuff, ERR_LOG_MSG_SZ, "%s(%d) - [%s], MSG:%.100s",           \
             __MODULE__, __LINE__, #condition, message);                                    \
-        printf("%s\r\n", _errBuff);                                                        \
+        __log_assert(_errBuff, nChars);                                                    \
+        printf("ASSERT: %s\r\n", _errBuff);                                                \
         SysRESET();                                                                        \
     }
 
@@ -291,11 +325,6 @@ void AsfInitialiseTasks ( void );
 void InstrManagerUserInit( void );
 osp_bool_t InstrManagerUserHandler( MessageBuffer *pMsg );
 
-/* Uart Support Functions */
-#ifdef UART_DMA_ENABLE
-void *RemoveFromList( PortInfo *pPort );
-void AddToList( PortInfo *pPort, void *pPBuff, uint16_t length );
-#endif
 
 #endif /* COMMON_H */
 /*-------------------------------------------------------------------------------------------------*\
