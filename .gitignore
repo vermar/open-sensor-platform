@@ -21,6 +21,7 @@
 *.uvproj.saved_uv4
 *.build_log.*
 *.dbgconf
+*.scvd
 RTE_Components.h
 
 # IAR EWARM
@@ -40,6 +41,25 @@ RTE_Components.h
 *.sim
 *.wsdt
 .ninja_*
+
+# GCC/Eclipse
+*.su
+*.launch
+*.list
+*.elf
+*.mk
+Debug
+Release
+.lock
+.log
+*.tree
+*.log
+*.dat
+*.history
+*.index
+*.prefs
+.metadata
+.settings
 
 # Libraries
 *.lib
@@ -66,4 +86,10 @@ RTE_Components.h
 *.vcxproj.*
 *.sdf
 *.sln.*
+
+# VS Code
+*.vscode
+
+# CMake
+CMake-GCC-Build
 
