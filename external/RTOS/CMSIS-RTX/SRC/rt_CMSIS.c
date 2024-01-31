@@ -690,7 +690,7 @@ uint32_t osKernelSysTick (void) {
 
 
 // ==== Thread Management ====
-extern int printf(char *format, ...);
+extern int printf(const char *format, ...);
 /// Set Thread Error (for Create functions which return IDs)
 static void sysThreadError (osStatus status) {
     if (status != osOK) {
