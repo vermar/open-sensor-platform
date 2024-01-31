@@ -63,6 +63,9 @@ static osPoolId _SysTimerPoolId;
 
 static LocalTimer_t _AsfTimers[MAX_OS_TIMERS];
 
+static osMutexDef(_tmrMtx);
+static osMutexId _tmrMtxId;
+
 /*-------------------------------------------------------------------------------------------------*\
  |    F O R W A R D   F U N C T I O N   D E C L A R A T I O N S
 \*-------------------------------------------------------------------------------------------------*/
@@ -126,17 +129,19 @@ static void SendTimerExpiry ( AsfTimer *pTimer )
 static void _TimerStart ( AsfTimer *pTimer, char *_file, int _line )
 {
     osStatus err;
+
     int32_t freeIdx = GetFreeTimerIdx();
     ASF_assert(freeIdx >= 0);
     ASF_assert( pTimer != NULLP );
-    ASF_assert_var( pTimer->sysUse == TIMER_NOT_IN_USE, pTimer->userValue, pTimer->owner, 0 ); //In case we are trying to restart a running timer
+    ASF_assert_vfl( pTimer->sysUse == TIMER_NOT_IN_USE, pTimer->userValue, pTimer->owner, 0,
+        _file, _line); //In case we are trying to restart a running timer
 
     _AsfTimers[freeIdx].asfT = pTimer; //Store reference of the application timer
     pTimer->sysUse = freeIdx;
      _AsfTimers[freeIdx].inUse = true;
+
     err = osTimerStart( _AsfTimers[freeIdx].TId, TICS_TO_MSEC(pTimer->ticks) );
-    //pTimer->timerId = os_tmr_create( pTimer->ticks, info );
-    ASF_assert( err == osOK );
+    ASF_assert_vfl( err == osOK, err, pTimer->userValue, pTimer->owner, _file, _line );
 }
 
 
@@ -160,6 +165,10 @@ void ASFTimerInitialize( void )
     /* We will use a block pool to allocate timer control structures */
     _SysTimerPoolId = osPoolCreate( osPool(tpool) );
     ASF_assert( _SysTimerPoolId != NULL );
+
+    /* Create Mutex */
+    _tmrMtxId = osMutexCreate(osMutex(_tmrMtx));
+    ASF_assert(_tmrMtxId != NULL);
 
     for (i = 0; i < MAX_OS_TIMERS; i++)
     {
@@ -205,10 +214,15 @@ osp_bool_t ASFTimerStarted ( AsfTimer *pTimer )
 ***************************************************************************************************/
 void _ASFTimerStart( TaskId owner, uint16_t ref, uint32_t tick, AsfTimer *pTimer, char *_file, int _line  )
 {
+    osStatus status;
+
+    status = osMutexWait(_tmrMtxId, OS_WAIT_FOREVER);
+    ASF_assert(status == osOK);
     pTimer->owner = owner;
     pTimer->ticks = tick;
     pTimer->userValue = ref;
     _TimerStart( pTimer, _file, _line );
+    osMutexRelease(_tmrMtxId);
 }
 
 
@@ -224,19 +238,20 @@ void _ASFTimerStart( TaskId owner, uint16_t ref, uint32_t tick, AsfTimer *pTimer
  ***************************************************************************************************/
 void ASFTimerExpiry ( void const *arg )
 {
-    OS_SETUP_CRITICAL();
+    osStatus status;
     AsfTimer *pTimer;
     uint32_t idx = (uint32_t)arg;
+
+    status = osMutexWait(_tmrMtxId, OS_WAIT_FOREVER);
+    ASF_assert(status == osOK);
     pTimer = _AsfTimers[idx].asfT;
     //Look for our magic number to be sure we got the right pointer
     ASF_assert_var( pTimer->sysUse != TIMER_NOT_IN_USE,  pTimer->ticks, pTimer->userValue, pTimer->owner);
 
-    OS_ENTER_CRITICAL();
     pTimer->sysUse = TIMER_NOT_IN_USE; //Timer no longer in use
     _AsfTimers[idx].inUse = false;
-    OS_LEAVE_CRITICAL();
-    /* Note: osMessagePut uses SVC call so the following is outside of critical section */
     SendTimerExpiry( pTimer );
+    osMutexRelease(_tmrMtxId);
 }
 
 
@@ -253,18 +268,26 @@ void ASFTimerExpiry ( void const *arg )
  ***************************************************************************************************/
 void _ASFKillTimer ( AsfTimer *pTimer, char *_file, int _line )
 {
-    OS_SETUP_CRITICAL();
+    osStatus status;
     TimerId tId;
     osStatus err;
     ASF_assert( pTimer != NULLP );
 
-    tId = _AsfTimers[pTimer->sysUse].TId;
-    err = osTimerStop( tId );
-    ASF_assert( err == osOK );
-    OS_ENTER_CRITICAL();
-    _AsfTimers[pTimer->sysUse].inUse = false;
-    pTimer->sysUse = TIMER_NOT_IN_USE; //Timer no longer in use
-    OS_LEAVE_CRITICAL();
+    status = osMutexWait(_tmrMtxId, OS_WAIT_FOREVER);
+    ASF_assert(status == osOK);
+    if (pTimer->sysUse < MAX_OS_TIMERS)
+    {
+        tId = _AsfTimers[pTimer->sysUse].TId;
+        err = osTimerStop(tId);
+        ASF_assert_vfl((err == osOK) || (err == osErrorResource), err, pTimer->sysUse, pTimer->userValue,
+            __MODULE__, __LINE__);
+        if (err == osOK)
+        {
+            _AsfTimers[pTimer->sysUse].inUse = false;
+            pTimer->sysUse = TIMER_NOT_IN_USE; //Timer no longer in use
+        }
+    }
+    osMutexRelease(_tmrMtxId);
 }
 
 
