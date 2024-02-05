@@ -1,19 +1,11 @@
 /*==================================================================================================
-** Copyright (c) 2021 10x Genomics Inc
-** All rights reserved
-**
-** This is UNPUBLISHED PROPRIETARY SOURCE CODE of 10x Genomics Inc. The contents of this file may
-** not be disclosed to third parties, copied, duplicated or reverse-engineered in any form, in
-** whole or in part, without the prior written permission of 10x Genomics Inc.
-**
-**==================================================================================================
 **  @file syscalls.c
 **  @brief Macros and functions for retargeting STDIO routines to the given hardware platform and
 **         GCC toolchain
 **
 **  Adapted from https://github.com/vermar/open-sensor-platform under the Apache License, Ver. 2.0
 **
-**  @author rajiv.verma@10xgenomics.com
+**  @author vermar@users.noreply.github.com
 **
 */
 /*-------------------------------------------------------------------------------------------------*\
