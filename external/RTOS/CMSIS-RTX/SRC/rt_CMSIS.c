@@ -69,7 +69,7 @@
 // Service Calls defines
 
 #if defined (__CC_ARM)          /* ARM Compiler */
-
+#error Hello
 #define __NO_RETURN __declspec(noreturn)
 
 #define osEvent_type       osEvent
@@ -134,7 +134,6 @@ static __inline   t __##f (t1 a1, t2 a2, t3 a3, t4 a4) {                       \
 #define SVC_2_3 SVC_2_1
 
 #elif defined (__GNUC__)        /* GNU Compiler */
-
 #ifndef __NO_RETURN
 #define __NO_RETURN __attribute__((noreturn))
 #endif
@@ -954,6 +953,7 @@ osStatus osDelay (uint32_t millisec) {
 os_InRegs osEvent osWait (uint32_t millisec) {
   osEvent ret;
 
+  (void)millisec;
 #if osFeature_Wait == 0
   ret.status = osErrorOS;
   return ret;
@@ -1288,6 +1288,7 @@ __NO_RETURN void osTimerThread (void const *argument) {
   osCallback cb;
   osEvent    evt;
 
+  (void)argument;
   for (;;) {
     evt = osMessageGet(osMessageQId_osTimerMessageQ, osWaitForever);
     if (evt.status == osEventMessage) {
@@ -1878,6 +1879,8 @@ SVC_2_3(svcMessageGet, os_InRegs osEvent,            osMessageQId,      uint32_t
 /// Create and Initialize Message Queue
 osMessageQId svcMessageCreate (const osMessageQDef_t *queue_def, osThreadId thread_id) {
 
+  (void)thread_id;
+
   if ((queue_def == NULL) ||
       (queue_def->queue_sz == 0U) ||
       (queue_def->pool == NULL)) {
@@ -2043,6 +2046,7 @@ osMailQId svcMailCreate (const osMailQDef_t *queue_def, osThreadId thread_id) {
   P_MCB    pmcb;
   void    *pool;
 
+  (void)thread_id;
   if ((queue_def == NULL) ||
       (queue_def->queue_sz == 0U) ||
       (queue_def->item_sz  == 0U) ||

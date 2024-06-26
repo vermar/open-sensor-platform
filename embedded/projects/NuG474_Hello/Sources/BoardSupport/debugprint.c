@@ -28,7 +28,7 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-#ifdef __GNUC__
+#if defined (__GNUC__) && !(defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
 int __io_putchar(int ch);
 #else
 int32_t ser_putchar (int32_t c);
@@ -320,7 +320,7 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
     else if (s_enEcho)
     {
         //Echo back
-#ifdef __GNUC__
+#if defined (__GNUC__) && !(defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
         __io_putchar(byte);
 #else
         ser_putchar(byte);

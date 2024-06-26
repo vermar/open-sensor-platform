@@ -84,6 +84,7 @@ __attribute__((always_inline)) static inline void __DMB(void)
 
 #endif
 
+#if (__ARMCOMPILER_VERSION < 6000000)
 __attribute__(( always_inline)) static inline U8 __clz(U32 value)
 {
   U8 result;
@@ -91,6 +92,9 @@ __attribute__(( always_inline)) static inline U8 __clz(U32 value)
   __asm volatile ("clz %0, %1" : "=r" (result) : "r" (value));
   return(result);
 }
+#else
+#include <arm_acle.h>
+#endif
 
 #elif defined (__ICCARM__)      /* IAR Compiler */
 

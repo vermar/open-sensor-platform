@@ -52,7 +52,7 @@ typedef struct _MsgCliCmd
     {
         int32_t value[NUM_CMD_ARGS];  /* Value for the command */
         char    cmdStr[COMMAND_LINE_SIZE]; /* Command String sans cmd part */
-    };
+    } u;
 } MsgCliCmd_t;
 
 /*-------------------------------------------------------------------------------------------------*\

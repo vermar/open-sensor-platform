@@ -18,15 +18,17 @@
 #include <stdio.h>
 #include "debugprint.h"
 
-#ifdef __CC_ARM
+#if defined __CC_ARM
 # pragma import(__use_no_semihosting_swi)
+#elif defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
+__asm(".global __use_no_semihosting\n\t");
 #endif
 
-#if defined (__GNUC__)
+#if defined (__GNUC__) && !(defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
 /* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
 set to 'Yes') calls __io_putchar() */
 #define PUTCHAR_PROTOTYPE int32_t __io_putchar(int32_t ch)
-#elif defined (__CC_ARM)
+#elif defined (__CC_ARM) || (defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
 #define PUTCHAR_PROTOTYPE int32_t fputc(int32_t ch, FILE *f)
 #endif /* __GNUC__ */
 
@@ -34,7 +36,10 @@ set to 'Yes') calls __io_putchar() */
 int32_t ser_putchar (int32_t c);
 int32_t ser_getchar (void);
 
+#if (__ARMCOMPILER_VERSION < 6000000)
 struct __FILE { int32_t handle; /* Add whatever you need here */ };
+#endif
+
 FILE __stdout;
 FILE __stdin;
 
@@ -44,7 +49,7 @@ PUTCHAR_PROTOTYPE
     return (ser_putchar(ch));
 }
 
-int fgetc (FILE *f)         { return (ser_getchar()); }
+int fgetc (FILE *f) { return ser_getchar(); }
 
 
 int ferror(FILE *f) {
@@ -53,7 +58,7 @@ int ferror(FILE *f) {
 }
 
 
-void _ttywrch(int32_t ch)       { ser_putchar(ch); }
+void _ttywrch(int32_t ch) { ser_putchar(ch); }
 
 
 void _sys_exit(int32_t return_code) {

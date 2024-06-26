@@ -25,6 +25,7 @@
 
         .file   "HAL_CM4.S"
         .syntax unified
+        .eabi_attribute Tag_ABI_align_preserved, 1	/* Fix for L6306W warning */
 
         .equ    TCB_STACKF, 37
         .equ    TCB_TSTACK, 40
