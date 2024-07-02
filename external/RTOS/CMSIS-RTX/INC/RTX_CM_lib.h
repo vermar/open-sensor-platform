@@ -354,7 +354,7 @@ void _mutex_release (OS_ID *mutex) {
  *      ARMCC6 Wrappers for ARMCC5 Binary
  *---------------------------------------------------------------------------*/
 
-#if defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
+#if 0 //defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
 
 typedef uint32_t __attribute__((vector_size(8)))  vect64_t;
 
