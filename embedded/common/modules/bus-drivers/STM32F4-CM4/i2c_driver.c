@@ -367,12 +367,12 @@ uint8_t I2C_Get_Data_From_Transceiver( uint8_t *msg, uint8_t msgSize )
 void I2C_Driver_ISR_Handler(void)
 {
 
-    __IO uint32_t SR1Register = 0;
-    __IO uint32_t SR2Register = 0;
+    __IO uint32_t SR1Register;
+    //__IO uint32_t SR2Register;
 
     /* Read the I2C SR1 and SR2 status registers */
     SR1Register = _I2cHandle.Instance->SR1;
-    SR2Register = _I2cHandle.Instance->SR2;
+    //SR2Register = _I2cHandle.Instance->SR2;
 
     /* If SB = 1, I2C master sent a START on the bus (EV5) or ReSTART in case of receive */
     if ((SR1Register & I2C_MASK_SB) == I2C_STATUS_BIT_SB)
@@ -544,12 +544,12 @@ void I2C_Driver_ISR_Handler(void)
  ***************************************************************************************************/
 void I2C_Driver_ERR_ISR_Handler(void)
 {
-    __IO uint32_t SR2Register = 0;
+    //__IO uint32_t SR2Register = 0;
     __IO uint32_t SR1Register = 0;
 
     /* Read the I2C1 status register */
     SR1Register = _I2cHandle.Instance->SR1;
-    SR2Register = _I2cHandle.Instance->SR2;
+    //SR2Register = _I2cHandle.Instance->SR2;
 
     /* If AF = 1 */
     if ((SR1Register & I2C_MASK_AF) == I2C_STATUS_BIT_AF)
