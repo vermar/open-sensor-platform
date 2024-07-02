@@ -1,7 +1,7 @@
 /* OSP Hello World Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,7 +160,8 @@ void CmdParse_User( int8_t *pBuffer, uint16_t size, uint16_t event )
         }
         else
         {
-            pBuffer[size - 1] = '\0'; //Remove 'CR' from the command string and terminate it
+            size = (size < COMMAND_LINE_SIZE) ? size : COMMAND_LINE_SIZE;
+            pBuffer[size - 1] = '\0'; //Remove 'CR' (if present) from the command string and terminate it
             /* char *strncpy(char *dest, const char *src, size_t n);
              * If there is no null byte among the first n bytes of src, the string placed in dest
              * will not be null-terminated.

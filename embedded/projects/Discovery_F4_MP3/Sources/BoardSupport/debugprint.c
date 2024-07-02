@@ -160,7 +160,7 @@ static EscSeq_t CheckAnsiEsc(uint8_t inByte)
  *          Adds the buffer to list and starts DMA transfer if this was the first buffer
  *
  ***************************************************************************************************/
-void AddToList( PortInfo *pPort, void *pPBuff, uint16_t length )
+static void AddToList( PortInfo *pPort, void *pPBuff, uint16_t length )
 {
     /* New printf buffers will be added to the list of buffers that will eventually be used for
        DMAing out the data */
@@ -275,7 +275,7 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
     {
         left += RX_BUFFER_SIZE + 1;
     } /* Here, left should be correct (between 0 and RX_BUFFER_SIZE). */
-    
+
     if (byte == TOKEN_BS)
     {
         if (left < RX_BUFFER_SIZE) //at least 1 char in the buffer
@@ -292,7 +292,7 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
             //ser_putchar(' ');
             //ser_putchar(TOKEN_BS);
             //backtrack one byte
-            pPort->rxWriteIdx--;
+            pPort->rxWriteIdx = (pPort->rxWriteIdx + RX_BUFFER_SIZE - 1) % RX_BUFFER_SIZE;
         }
         return;
     }
@@ -331,6 +331,8 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
                 }
 #endif
             }
+            /* Update the port control block values */
+            pPort->rxWriteIdx = writeIdx;
         }
         else if (esState == ES_CURSOR_UP)
         {
@@ -343,9 +345,11 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
             return;
         }
     }
-
-    /* Update the port control block values */
-    pPort->rxWriteIdx = writeIdx;
+    /* If the buffer gets full we still want to wakeup task if user presses 'Enter' */
+    else if ((left == 0) && ((byte == '\r') || (byte == '\n')))
+    {
+        osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, UART_CRLF_RECEIVE);
+    }
 }
 
 
@@ -450,6 +454,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
     /* Disable Transfer Complete interrupt */
     __HAL_UART_DISABLE_IT(huart, UART_IT_TC);
+
+    /* Tx process is ended, restore HAL State to Ready */
+    gDbgUartPort.hUart->gState = HAL_UART_STATE_READY;
 
     /*Get the next print buffer */
     pNewBuf = GetNextBuffer(&gDbgUartPort);

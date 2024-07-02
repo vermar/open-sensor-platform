@@ -96,12 +96,16 @@ void PlatformInitialize( void )
     /* STM32F4xx HAL library initialization:
        - Configure the Flash prefetch, instruction and Data caches
        - Configure the Systick to generate an interrupt each 1 msec
-       - Set NVIC Group Priority to 4
        - Global MSP (MCU Support Package) initialization
+       - Set NVIC Priority Grouping (default NVIC_PRIORITYGROUP_4 - 4-bits for pre-emption priority,
+         0 for sub-priority)
     */
     HAL_Init();
 
-    // Configure the System clock to have a frequency of 168 MHz
+    /* NVIC configuration */
+    SystemInterruptConfig();
+
+    /* Configure the System clock to have a frequency of 168MHz */
     SystemClock_Config();
     SystemCoreClockUpdate();
 
@@ -130,7 +134,6 @@ void PlatformInitialize( void )
     D0_printf("\tHCLK     - %ld\r\n", HAL_RCC_GetHCLKFreq());
     D0_printf("\tPCLK1    - %ld\r\n", HAL_RCC_GetPCLK1Freq());
     D0_printf("\tPCLK2    - %ld\r\n", HAL_RCC_GetPCLK2Freq());
-    //D0_printf("RTC Prescalar: %ld\r\n", PrescalerValue);
 
     D0_printf("Device SNo.: %08X-%08X-%08X\r\n", gDevUniqueId->uidWords[2],
         gDevUniqueId->uidWords[1], gDevUniqueId->uidWords[0]);

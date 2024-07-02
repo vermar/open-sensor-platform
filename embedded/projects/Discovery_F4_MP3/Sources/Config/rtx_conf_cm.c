@@ -97,7 +97,7 @@ typedef struct _TotalStkNeeded
 //   <i> Defines the number of threads with user-provided stack size.
 //   <i> Default: 0
 #ifndef OS_PRIVCNT
- #define OS_PRIVCNT     (NUMBER_OF_TASKS-1)
+ #define OS_PRIVCNT     NUMBER_OF_TASKS //Note: main() is same as instrumentation task and counts here
 #endif
 
 //   <o>Total stack size [bytes] for threads with user-provided stack size <0-1048576:8><#/4>
@@ -201,14 +201,14 @@ typedef struct _TotalStkNeeded
 //   <i> Defines stack size for Timer thread.
 //   <i> Default: 200
 #ifndef OS_TIMERSTKSZ
- #define OS_TIMERSTKSZ  250     // this stack size value is in words
+ #define OS_TIMERSTKSZ  100     // this stack size value is in words
 #endif
 
 //   <o>Timer Callback Queue size <1-32>
 //   <i> Number of concurrent active timer callback functions.
 //   <i> Default: 4
 #ifndef OS_TIMERCBQS
- #define OS_TIMERCBQS   1
+ #define OS_TIMERCBQS   16
 #endif
 
 // </e>

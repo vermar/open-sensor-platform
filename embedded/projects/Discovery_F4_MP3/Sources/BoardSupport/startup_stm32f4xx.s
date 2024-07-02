@@ -46,7 +46,7 @@
 ; </h>
 
                 EXPORT  gStackSize
-gStackSize      EQU     0x00000200
+gStackSize      EQU     0x00000400
 
                 EXPORT  gStackMem
                 AREA    STACK, NOINIT, READWRITE, ALIGN=3
@@ -54,19 +54,20 @@ gStackMem       SPACE   gStackSize
 __initial_sp
 
 
-                EXPORT  Stack_Top
-Stack_Top       EQU     gStackMem + gStackSize
+                EXPORT  gStackMemTop
+gStackMemTop    EQU     gStackMem + gStackSize
 
 
 ; <h> Heap Configuration
 ;   <o>  Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
 ; </h>
-
-Heap_Size       EQU     0x200
+                EXPORT  gHeapSize
+                EXPORT  gHeapStart
+gHeapSize       EQU     0x200
 
                 AREA    HEAP, NOINIT, READWRITE, ALIGN=3
 __heap_base
-Heap_Mem        SPACE   Heap_Size
+gHeapStart      SPACE   gHeapSize
 __heap_limit
 
                 PRESERVE8
@@ -435,10 +436,10 @@ FPU_IRQHandler
 
 __user_initial_stackheap
 
-                 LDR     R0, =  Heap_Mem
+                 LDR     R0, =  gHeapStart
                  LDR     R4, [R5]
                  LDR     R1, =(gStackMem + gStackSize)
-                 LDR     R2, = (Heap_Mem +  Heap_Size)
+                 LDR     R2, = (gHeapStart +  gHeapSize)
                  LDR     R3, = gStackMem
                  BX      LR
 

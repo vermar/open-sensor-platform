@@ -1,7 +1,7 @@
 /* OSP Hello World Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,15 +32,13 @@
 **                 application to access the thread properties and its
 **                 associated queue.
 **      EntryFunction - Thread entry function name.
-**      Priority - Thread priority in the range of 51 through 254. Higher value
-**                 implies higher priority. Values 0 through 50 are reserved and
-**                 should not be used.
+**      Priority - Thread priority as defined in CMSIS-RTOS API definition (see cmsis_os.h).
 **      StackSize - Thread stack size in bytes.
 **      QueueSize - This denotes the maximum number of messages that are allowed
 **                 to be queued for the thread. An optimum value should be
 **                 chosen for this parameter to minimize memory wastage.
 **
-**      Example:   ASF_TASK_STATIC ( COMM_THREAD, CommThreadEntry, 55, 1024, 10 )
+**      Example:   ASF_TASK_STATIC ( COMM_THREAD, CommThreadEntry, osPriorityNormal, 1024, 10 )
 **
 ** Entry Function must be declared in the following manner:
 **      ASF_TASK MyThreadEntry ( ASF_TASK_ARG )
@@ -51,7 +49,7 @@
 */
 /* Declare additional application specific tasks here */
 /* NOTE: STACK_INCREASE can be used to increase the stack size of all tasks by a constant amount.
-   This value is set in ASF_TaskInit.c file and is normally 0. Use this for Debugging crashes */
+   This value is set in rtx_conf_cm.c file and is normally 0. Use this for Debugging crashes */
 ASF_TASK_STATIC (USBH_IF_TASK_ID,       UsbHostTask,        osPriorityNormal,  (0x500+STACK_INCREASE),  4)
 ASF_TASK_STATIC (MP3_APP_TASK_ID,       Mp3PlayerTask,      osPriorityRealtime,  (0xD00+STACK_INCREASE),  16)
 
