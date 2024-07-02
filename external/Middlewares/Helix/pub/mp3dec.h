@@ -50,7 +50,7 @@
 #
 #elif defined(_WIN32) && defined(WINCE_EMULATOR)
 #
-#elif defined(ARM_ADS) || defined(__CC_ARM) || defined (__ICCARM__)
+#elif defined(ARM_ADS) || defined(__CC_ARM) || defined (__ICCARM__) || defined (__ARMCOMPILER_VERSION)
 #
 #elif defined(_SYMBIAN) && defined(__WINS__)	/* Symbian emulator for Ix86 */
 #

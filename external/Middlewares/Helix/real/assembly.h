@@ -374,7 +374,7 @@ static __inline Word64 SAR64(Word64 x, int n)
 
 }
 
-#elif defined(__GNUC__) && defined(ARM)
+#elif defined(__GNUC__) && (defined(ARM) || defined(__ARMCC_VERSION))
 
 typedef long long Word64;
 

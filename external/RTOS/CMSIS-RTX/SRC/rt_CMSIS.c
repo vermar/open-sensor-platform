@@ -69,7 +69,6 @@
 // Service Calls defines
 
 #if defined (__CC_ARM)          /* ARM Compiler */
-#error Hello
 #define __NO_RETURN __declspec(noreturn)
 
 #define osEvent_type       osEvent
@@ -133,7 +132,7 @@ static __inline   t __##f (t1 a1, t2 a2, t3 a3, t4 a4) {                       \
 #define SVC_1_3 SVC_1_1
 #define SVC_2_3 SVC_2_1
 
-#elif defined (__GNUC__)        /* GNU Compiler */
+#elif defined (__GNUC__) || defined (__ARMCC_VERSION)      /* GNU Compiler or ARMCLANG */
 #ifndef __NO_RETURN
 #define __NO_RETURN __attribute__((noreturn))
 #endif
