@@ -47,11 +47,6 @@ void UartTxDMAStart( PortInfo *pPort, uint8_t *pTxBuffer, uint16_t txBufferSize 
 void RxBytesToBuff( PortInfo *pPort, uint8_t byte );
 
 #ifndef UART_DMA_ENABLE
-bool_t GetNextByteToTx( uint8_t* pucByte );
-#else
-void *GetNextBuffer( PortInfo *pPort );
-#endif
-
 /* Support functions for DEBUG Uart */
 static __inline void DisableDbgUartInterrupt( void ) {
     NVIC_DisableIRQ(DBG_UART_IRQn);
@@ -60,6 +55,7 @@ static __inline void DisableDbgUartInterrupt( void ) {
 static __inline void EnableDbgUartInterrupt( void ) {
     NVIC_EnableIRQ(DBG_UART_IRQn);
 }
+#endif
 
 #ifdef UART_DMA_ENABLE
 static __inline void EnableDbgUartDMAxferCompleteInt( void ) {
@@ -80,7 +76,7 @@ static __inline void EnableDbgUartDMATxRequest( void ) {
 #endif
 
 static __inline void DbgUartSendByte( uint8_t byte ) {
-    gDbgUartPort.hUart->Instance->DR = (byte & 0xFF);
+    gDbgUartPort.hUart->Instance->DR = byte;
 }
 
 static __inline uint8_t DbgUartReadByte( void ) {

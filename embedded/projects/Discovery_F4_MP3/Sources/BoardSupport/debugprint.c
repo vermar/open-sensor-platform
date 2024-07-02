@@ -1,7 +1,7 @@
-/* OSP Hello World Project
+/* Open Sensor Platform Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,31 +28,15 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-#ifdef __GNUC__
+#if defined (__GNUC__) && !(defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
 int __io_putchar(int ch);
 #else
 int32_t ser_putchar (int32_t c);
 #endif
 
 /*-------------------------------------------------------------------------------------------------*\
- |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
-\*-------------------------------------------------------------------------------------------------*/
-PortInfo gDbgUartPort;      //Debug information port
-
-/*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
-/**
- * Declare separate pool for debug printf messages
- */
-#ifdef UART_DMA_ENABLE
-# define DPRINTF_MPOOL_SIZE         (DPRINTF_BUFF_SIZE + 8)
-
-uint32_t gMemPoolDprintf[3+((DPRINTF_MPOOL_SIZE+3)/4)*(MAX_DPRINTF_MESSAGES)];
-const osPoolDef_t PrintBufPool = { MAX_DPRINTF_MESSAGES, DPRINTF_MPOOL_SIZE, gMemPoolDprintf };
-static osPoolId _BufPoolId;
-#endif
-
 #define DEL_CHAR_W_ECHO             "\x08 \x08"
 #define DEL_CHAR_NO_ECHO            " \x08"
 #define ESC_CHAR                    0x1B
@@ -71,17 +55,37 @@ typedef enum _EscSeq
     ES_SKIP,
 } EscSeq_t;
 
+/* The following structure is only used for defining memory blocks size and not used in the code. In essence
+* it replicates the first two members of PktBuff_t (common.h) and adds the actual buffer instead
+* of pointer */
+typedef struct _TxDmaBuff
+{
+    uint32_t *pNext;    //link to next buffer
+    uint32_t  bufLen;   //Length of data in this buffer
+    uint8_t   buff[DPRINTF_BUFF_SIZE];   //data buffer
+} TxDmaBuff_t;
+
+
 /*-------------------------------------------------------------------------------------------------*\
  |    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 /* UART handler declaration */
-static UART_HandleTypeDef _UartHandle;
-static DMA_HandleTypeDef _TxDmaHandle;
-static osp_bool_t _enEcho = false;
+static UART_HandleTypeDef s_uartHandle;
+static DMA_HandleTypeDef s_txDmaHandle;
+static osp_bool_t s_enEcho = false;
+static osPoolId s_bufPoolId;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    F O R W A R D   F U N C T I O N   D E C L A R A T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+
+/*-------------------------------------------------------------------------------------------------*\
+ |    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
+\*-------------------------------------------------------------------------------------------------*/
+PortInfo gDbgUartPort;      //Debug information port
+
+osPoolDef(gDbgTxDmaPool, MAX_DPRINTF_MESSAGES, TxDmaBuff_t); //Declare memory pool for transmit buffers
+const osPoolDef_t* gDbgPrintPool = osPool(gDbgTxDmaPool);
 
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E     F U N C T I O N S
@@ -150,9 +154,33 @@ static EscSeq_t CheckAnsiEsc(uint8_t inByte)
     return ret;
 }
 
-/*-------------------------------------------------------------------------------------------------*\
- |    P U B L I C     F U N C T I O N S
-\*-------------------------------------------------------------------------------------------------*/
+#ifdef UART_DMA_ENABLE
+/****************************************************************************************************
+ * @fn      RemoveFromList
+ *          Removes head object (in FIFO order) from list and returns pointer to the list object
+ *          Note that this function is always called from ISR context.
+ *
+ ***************************************************************************************************/
+static void *RemoveFromList( PortInfo *pPort )
+{
+    /* At this point the DMA has consumed this buffer. It will be removed from the list and the
+       returned buffer pointer will be used to free the printf buffer. The DMA completion handler
+       should call this function, free the memory and then use the buffer pointed by the Head pointer */
+    void *pTemp;
+
+    if (pPort->pHead == NULL)
+    {
+        return NULL;
+    }
+
+    pTemp = pPort->pHead;
+    pPort->pHead = (void *)M_NextBlock(pPort->pHead); //If this is the last element then spHead will now be NULL
+    /* Here we should check if spHead is NULL and correspondingly set spTail to NULL but since
+       we probably won't check for spTail == NULL, we skip that step here. */
+
+    return pTemp;
+}
+#endif
 
 #ifdef UART_DMA_ENABLE
 /****************************************************************************************************
@@ -174,6 +202,7 @@ static void AddToList( PortInfo *pPort, void *pPBuff, uint16_t length )
     {
         pPort->pTail = pPort->pHead = pObj; //First DWORD is reserved for list management
         M_NextBlock(pObj) = NULL;
+        OS_LEAVE_CRITICAL();
 
         /* Start the first DMA transfer */
         UartTxDMAStart( pPort, pPBuff, length );
@@ -184,39 +213,35 @@ static void AddToList( PortInfo *pPort, void *pPBuff, uint16_t length )
         pPort->pTail = pObj;
         M_NextBlock(pObj) = NULL;
         M_NextBlock(pTemp) = pObj;
+        OS_LEAVE_CRITICAL();
     }
-    OS_LEAVE_CRITICAL();
-}
-
-
-/****************************************************************************************************
- * @fn      RemoveFromList
- *          Removes head object (in FIFO order) from list and returns pointer to the list object
- *
- ***************************************************************************************************/
-void *RemoveFromList( PortInfo *pPort )
-{
-    /* At this point the DMA has consumed this buffer. It will be removed from the list and the
-       returned buffer pointer will be used to free the printf buffer. The DMA completion handler
-       should call this function, free the memory and then use the buffer pointed by the Head pointer */
-    void *pTemp;
-    OS_SETUP_CRITICAL();
-
-    //ASF_assert(pPort->pHead != NULL);
-    if (pPort->pHead == NULL)
-    {
-        return NULL;
-    }
-    OS_ENTER_CRITICAL();
-    pTemp = pPort->pHead;
-    pPort->pHead = (void *)M_NextBlock(pPort->pHead); //If this is the last element then spHead will now be NULL
-    /* Here we should check if spHead is NULL and correspondingly set spTail to NULL but since
-       we probably won't check for spTail == NULL, we skip that step here. */
-    OS_LEAVE_CRITICAL();
-    return pTemp;
 }
 #endif
 
+#ifdef UART_DMA_ENABLE
+/****************************************************************************************************
+ * @fn      GetNextBuffer
+ *          Called from DMA TC ISR to request next buffer to process
+ *
+ ***************************************************************************************************/
+static void *GetNextBuffer( PortInfo *pPort )
+{
+    osStatus status;
+
+    void *pFreeBuff = RemoveFromList( pPort );
+    if (pFreeBuff != NULL)
+    {
+        //Free the current consumed buffer
+        status = osPoolFree(pPort->pBuffPool, pFreeBuff);
+        ASF_assert(status == osOK);
+    }
+    return pPort->pHead; //Return the current head of the list
+}
+#endif
+
+/*-------------------------------------------------------------------------------------------------*\
+ |    P U B L I C     F U N C T I O N S
+\*-------------------------------------------------------------------------------------------------*/
 
 /****************************************************************************************************
  * @fn      DebugPortInit
@@ -225,10 +250,10 @@ void *RemoveFromList( PortInfo *pPort )
  ***************************************************************************************************/
 void DebugPortInit( void )
 {
-    _BufPoolId = osPoolCreate( &PrintBufPool );
-    ASF_assert( _BufPoolId != NULL );
+    s_bufPoolId = osPoolCreate(gDbgPrintPool);
+    ASF_assert( s_bufPoolId != NULL );
 
-    gDbgUartPort.pBuffPool = _BufPoolId;
+    gDbgUartPort.pBuffPool = s_bufPoolId;
     gDbgUartPort.rxWriteIdx = 1;
     gDbgUartPort.rxReadIdx  = 0;
     gDbgUartPort.rcvTask    = CMD_HNDLR_TASK_ID;
@@ -238,8 +263,8 @@ void DebugPortInit( void )
 #else
     gDbgUartPort.pHead      = NULL;
     gDbgUartPort.pTail      = NULL;
-    gDbgUartPort.hUart      = &_UartHandle;
-    gDbgUartPort.hDMA       = &_TxDmaHandle;
+    gDbgUartPort.hUart      = &s_uartHandle;
+    gDbgUartPort.hDMA       = &s_txDmaHandle;
     gDbgUartPort.UartBaseAddress = 0;   //Not used
     gDbgUartPort.ValidateInput = NULL;
     /* Note functions can be empty but not NULL (coz we dont' check for null) */
@@ -261,7 +286,7 @@ void DebugPortInit( void )
  ***************************************************************************************************/
 void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
 {
-    int32_t  left;
+    int32_t  remaining;
     uint16_t  readIdx, writeIdx;
     EscSeq_t esState;
 
@@ -270,36 +295,32 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
     writeIdx = pPort->rxWriteIdx;
 
     /* Check if enough room in the buffer to store the new data. */
-    left = readIdx - writeIdx;
+    remaining = readIdx - writeIdx;
     if(readIdx < writeIdx)
     {
-        left += RX_BUFFER_SIZE + 1;
-    } /* Here, left should be correct (between 0 and RX_BUFFER_SIZE). */
+        remaining += RX_BUFFER_SIZE;
+    } /* Here, remaining should be correct (between 0 and RX_BUFFER_SIZE-1). */
 
     if (byte == TOKEN_BS)
     {
-        if (left < RX_BUFFER_SIZE) //at least 1 char in the buffer
+        if (remaining < (RX_BUFFER_SIZE-1)) //at least 1 char in the buffer
         {
-            if (_enEcho)
+            if (s_enEcho)
             {
-                //ser_putchar(TOKEN_BS);
                 D0_printf(DEL_CHAR_W_ECHO);
             }
             else
             {
                 D0_printf(DEL_CHAR_NO_ECHO);
             }
-            //ser_putchar(' ');
-            //ser_putchar(TOKEN_BS);
-            //backtrack one byte
             pPort->rxWriteIdx = (pPort->rxWriteIdx + RX_BUFFER_SIZE - 1) % RX_BUFFER_SIZE;
         }
         return;
     }
-    else if (_enEcho)
+    else if (s_enEcho)
     {
         //Echo back
-#ifdef __GNUC__
+#if defined (__GNUC__) && !(defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
         __io_putchar(byte);
 #else
         ser_putchar(byte);
@@ -309,7 +330,7 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
     /* Check for ANSI escape sequence */
     esState = CheckAnsiEsc(byte);
 
-    if ((left > 0) && (esState != ES_SKIP))
+    if ((remaining > 0) && (esState != ES_SKIP))
     {
         if (esState == ES_NONE)
         {
@@ -334,41 +355,22 @@ void RxBytesToBuff( PortInfo *pPort, uint8_t byte )
             /* Update the port control block values */
             pPort->rxWriteIdx = writeIdx;
         }
-        else if (esState == ES_CURSOR_UP)
+        else if ((esState == ES_CURSOR_UP) && (pPort->rcvTask != UNKNOWN_TASK_ID))
         {
             osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, EVT_FLAG_CURSOR_UP);
-            return;
         }
-        else if (esState == ES_CURSOR_DN)
+        else if ((esState == ES_CURSOR_DN) && (pPort->rcvTask != UNKNOWN_TASK_ID))
         {
             osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, EVT_FLAG_CURSOR_DN);
-            return;
         }
     }
     /* If the buffer gets full we still want to wakeup task if user presses 'Enter' */
-    else if ((left == 0) && ((byte == '\r') || (byte == '\n')))
+    else if ((remaining == 0) && ((byte == '\r') || (byte == '\n')) && (pPort->rcvTask != UNKNOWN_TASK_ID))
     {
         osSignalSet(asfTaskHandleTable[pPort->rcvTask].handle, UART_CRLF_RECEIVE);
     }
 }
 
-
-#ifdef UART_DMA_ENABLE
-/****************************************************************************************************
- * @fn      GetNextBuffer
- *          Called from DMA TC ISR to request next buffer to process
- *
- ***************************************************************************************************/
-void *GetNextBuffer( PortInfo *pPort )
-{
-    void *pFreeBuff = RemoveFromList( pPort );
-    if (pFreeBuff != NULL)
-    {
-        ASF_assert(osPoolFree(pPort->pBuffPool, pFreeBuff) == osOK); //Free the current consumed buffer
-    }
-    return pPort->pHead; //Return the current head of the list
-}
-#endif
 
 /****************************************************************************************************
  * @fn      _dprintf
