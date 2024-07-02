@@ -1,7 +1,7 @@
 /* OSP Hello World Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -194,30 +194,52 @@ int _lseek(int file, int ptr, int dir)
  * @fn      _sbrk
  *          Increase program data space. Malloc and related functions depend on this
  *
+ * @brief _sbrk() allocates memory to the newlib heap and is used by malloc
+ *        and others from the C library
+ *
+ * @verbatim
+ * ############################################################################
+ * #  .data  #  .bss  #       newlib heap       #          MSP stack          #
+ * #         #        #                         # Reserved by _Min_Stack_Size #
+ * ############################################################################
+ * ^-- RAM start      ^-- gHeapStart                  gStackMemTop, RAM end --^
+ * @endverbatim
+ *
+ * This implementation starts allocating at the 'gHeapStart' linker symbol
+ * The '_Min_Stack_Size' linker symbol reserves a memory for the MSP stack
+ * The implementation considers 'gStackMemTop' linker symbol to be RAM end (based on RAM consumed)
+ * NOTE: If the MSP stack, at any point during execution, grows larger than the
+ * reserved size, please increase the '_Min_Stack_Size'.
+ *
+ * @param incr Memory size
+ * @return Pointer to allocated memory
+  *
  ***************************************************************************************************/
 caddr_t _sbrk(int incr)
 {
-    extern char _ebss; // Defined by the linker
-    static char *heap_end;
+    extern char gHeapStart; // Defined by the linker
+    extern char gHeapEnd; /* Symbol defined in the linker script */
+    static char *heap_end = 0;
     char *prev_heap_end;
+    char *max_heap = (char*)&gHeapEnd;
+
 
     if (heap_end == 0)
     {
-        heap_end = &_ebss;
+        heap_end = &gHeapStart;
     }
     prev_heap_end = heap_end;
 
     char * stack = (char*)__get_MSP();
-    if (heap_end + incr > stack)
+    if ((heap_end + incr > stack) || (heap_end + incr > max_heap))
     {
-        _write(STDERR_FILENO, "Heap and stack collision\r\n", 26);
+        _write(STDERR_FILENO, "Heap Overflow and/or Stack collision\r\n", 38);
         errno = ENOMEM;
         return (caddr_t)-1;
     }
 
     heap_end += incr;
     return (caddr_t)prev_heap_end;
-
 }
 
 /*

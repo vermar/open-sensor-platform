@@ -51,9 +51,9 @@
 /* CMSIS OS macros */   
 #if (USBH_USE_OS == 1)
 # ifndef __CMSIS_RTOS
-#  include "Common.h"
+#  include "common.h"
 # else
-#  include "Common.h"
+#  include "common.h"
 # define   USBH_PROCESS_PRIO          osPriorityNormal
 # define   USBH_PROCESS_STACK_SIZE    (8 * 128)
 # endif
