@@ -1,7 +1,7 @@
 /* OSP Hello World Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,10 @@
 #include "common.h"
 #include "i2c_driver.h"
 
-#ifdef I2C_DRIVER //defined in Common.h
+#ifdef I2C_DRIVER //defined in Main.h/Common.h
+# ifndef I2C_DRIVER_TASK
+#  error The application task that handles I2C interface must be designated as I2C_DRIVER_TASK in Main.h
+# endif
 
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
@@ -36,9 +39,13 @@ extern AsfTaskHandle asfTaskHandleTable[];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
+#define I2C_WAIT_TIMEOUT                      20 //ms
 #define I2C_TXRX_STATUS_ACTIVE                0
 #define I2C_TXRX_STATUS_PASSED                1
 #define I2C_TXRX_STATUS_FAILED                2
+#define I2C_TXRX_STATUS_ADDRNAK               4
+
+#define I2C_MASTER_RESTART                    ((I2C_SendMode_t)(NUM_I2C_MODES+1)) //For internal use
 
 /* I2C START mask */
 #define CR1_START_Set                         ((uint16_t)0x0100)
@@ -138,15 +145,19 @@ static void I2C_HardwareSetup( void )
     GPIO_InitTypeDef  GPIO_InitStructure;
 
     /* Enable Clocks GPIOs used */
-    RCC_GPIO_CLK_ENABLE( RCC_Periph_I2C_IF_BUS_GPIO ); //for I2C port GPIO
+    I2C_SDA_GPIO_CLK_ENABLE();
+    I2C_SCL_GPIO_CLK_ENABLE();
 
     /* GPIO Configuration for CLK and SDA signals */
-    GPIO_InitStructure.Pin = I2C_IF_BUS_CLK_PIN  | I2C_IF_BUS_SDA_PIN;
+    GPIO_InitStructure.Pin = I2C_IF_BUS_SCL_GPIO_PIN;
     GPIO_InitStructure.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStructure.Pull = GPIO_NOPULL;
     GPIO_InitStructure.Speed = GPIO_SPEED_FAST;
-    GPIO_InitStructure.Alternate  = I2C_IF_SCL_SDA_AF;
-    HAL_GPIO_Init( I2C_IF_BUS_GPIO_GRP, &GPIO_InitStructure );
+    GPIO_InitStructure.Alternate = I2C_IF_SCL_SDA_AF;
+    HAL_GPIO_Init(I2C_IF_BUS_SCL_GPIO_GRP, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Pin = I2C_IF_BUS_SDA_GPIO_PIN;
+    HAL_GPIO_Init(I2C_IF_BUS_SDA_GPIO_GRP, &GPIO_InitStructure);
 
     /* Enable I2C Peripheral clock */
     I2C_IF_CLK_ENABLE();
@@ -212,34 +223,32 @@ void I2C_Master_Initialise( I2C_TypeDef *busId )
  * @return  interrupt enabled status
  *
  ***************************************************************************************************/
-void I2C_Wait_Completion( void )
+uint8_t I2C_Wait_Completion( void )
 {
 #ifdef __CMSIS_RTOS
     osEvent  ret;
-    uint16_t evtFlags;
 
-    do
+    ret = osSignalWait( EVT_FLAG_ANY_EVENT, I2C_WAIT_TIMEOUT );
+    if (ret.status == osEventTimeout)
     {
-        evtFlags = 0;
-        ret = osSignalWait( 0, 20 );
-        if (ret.status == osEventSignal)
-        {
-            evtFlags = ret.value.signals;
-        }
-        else
-        {
-            D0_printf("### WARNING - Timedout on I2C completion ###\r\n");
-            break;
-        }
-    } while (!(evtFlags & I2C_TXRX_STATUS_FAILED) && !(evtFlags & I2C_TXRX_STATUS_PASSED));
+        D0_printf("### WARNING - Timedout on I2C completion ###\r\n");
+        return I2C_ERR_TIMEOUT;
+    }
+    else if (ret.value.signals & I2C_TXRX_STATUS_FAILED)
+    {
+        return I2C_ERR_FAIL;
+    }
+    return I2C_ERR_OK;
 #else
     OS_RESULT result;
 
-    result = os_evt_wait_or( I2C_TXRX_STATUS_FAILED | I2C_TXRX_STATUS_PASSED, MSEC_TO_TICS(20));
+    result = os_evt_wait_or( I2C_TXRX_STATUS_FAILED | I2C_TXRX_STATUS_PASSED, MSEC_TO_TICS(I2C_WAIT_TIMEOUT));
     if (result == OS_R_TMO)
     {
         D0_printf("### WARNING - Timedout on I2C completion ###\r\n");
+        return I2C_ERR_TIMEOUT;
     }
+    return I2C_ERR_OK; //TODO Error return
 #endif
 }
 
@@ -263,18 +272,27 @@ uint8_t I2C_Transceiver_Busy( void )
 }
 
 
-/****************************************************************************************************
- * @fn      I2C_Start_Transfer
- *          Call this function to send a prepared data. Also include how many bytes that should be
- *          sent/read including the address byte. The function will initiate the transfer and return
- *          immediately (or return with error if previous transfer pending). User must wait for
- *          transfer to complete by calling I2C_Wait_Completion
- *
- * @param   //TODO
- *
- * @return  none
- *
- ***************************************************************************************************/
+/***************************************************************************************************
+** @brief Start I2C transfer (read or write)
+**
+** Call this function to send a prepared data. Also include how many bytes that should be sent/read
+** including the address byte. The function will initiate the transfer and return immediately (or
+** return with error if previous transfer pending). User must wait for transfer to complete by
+** calling I2C_Wait_Completion()
+**
+**  Input:
+** @param pPktBuff:     Pointer to received packet data
+** @param bufLen:       Length of the received data packet.
+** @param slaveAddr:    The slave device's 7-bit address value (not left shifted)
+** @param regAddr:      When the device has register based access this will contain the register address
+**                      from where the read or write is done
+** @param pData:        Buffer that will contain data for writing or will receive data for reading
+** @param dataSize:     Data size expected in read and sent in write
+** @param sendMode:     One of the enum values supported by the driver for I2C transaction (simple/register based etc)
+**
+** @return I2C_ERR_BUSY:    I2C interface is busy with previous transaction
+** @return I2C_ERR_OK:      I2C interface is idle
+*/
 uint8_t I2C_Start_Transfer( uint8_t slaveAddr, uint16_t regAddr, uint8_t *pData, uint16_t dataSize, I2C_SendMode_t sendMode )
 {
     /* Check that no transfer is already pending*/
@@ -285,11 +303,11 @@ uint8_t I2C_Start_Transfer( uint8_t slaveAddr, uint16_t regAddr, uint8_t *pData,
         return I2C_ERR_BUSY;
     }
 
-    if ((sendMode == I2C_MASTER_READ) || (sendMode == I2C_MASTER_WRITE))
+    if ((sendMode >= I2C_MASTER_SIMPLE_WRITE) && (sendMode <= I2C_MASTER_REG_READ))
     {
         /* Update the transfer descriptor */
         _AsyncXfer.i2c_slave_addr  = (slaveAddr << 1);
-        _AsyncXfer.i2c_slave_reg   = regAddr;
+        _AsyncXfer.i2c_slave_reg   = regAddr;  //Don't care for SIMPLE_READ/WRITE
         _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_ACTIVE;
         _AsyncXfer.pData           = pData;
         _AsyncXfer.num             = dataSize;
@@ -298,8 +316,7 @@ uint8_t I2C_Start_Transfer( uint8_t slaveAddr, uint16_t regAddr, uint8_t *pData,
         _SendMode = sendMode;
         /* Enable interrupts and clear flags */
         __HAL_I2C_ENABLE_IT( &_I2cHandle, I2C_IT_EVT | I2C_IT_BUF | I2C_IT_ERR );
-        __HAL_I2C_CLEAR_FLAG( &_I2cHandle, I2C_FLAG_SMBALERT | I2C_FLAG_TIMEOUT | I2C_FLAG_PECERR | I2C_FLAG_OVR
-            | I2C_FLAG_AF | I2C_FLAG_ARLO | I2C_FLAG_BERR );
+        __HAL_I2C_CLEAR_FLAG( &_I2cHandle, I2C_FLAG_OVR | I2C_FLAG_AF | I2C_FLAG_ARLO | I2C_FLAG_BERR );
 
         /* Enable ACK as it is disabled in interrupt handler after each transaction */
         _I2cHandle.Instance->CR1 |= CR1_ACK_Set;
@@ -360,48 +377,40 @@ void I2C_Driver_ISR_Handler(void)
     /* If SB = 1, I2C master sent a START on the bus (EV5) or ReSTART in case of receive */
     if ((SR1Register & I2C_MASK_SB) == I2C_STATUS_BIT_SB)
     {
-        /* Send the slave address for transmssion or for reception (according to the configured value
-            in the write master write routine */
-        if (_SendMode == I2C_MASTER_RESTART)
+        /* Send the slave address for transmission or for reception (according to the configured value
+            in the master write routine) */
+        if ((_SendMode == I2C_MASTER_RESTART) || (_SendMode == I2C_MASTER_SIMPLE_READ))
         {
             _I2cHandle.Instance->DR = _AsyncXfer.i2c_slave_addr | 0x01; //Set read bit
             //After this we just wait for RXNE interrupts to read data
         }
-        else
+        else //Its a Write transaction (simple or register)
         {
             _I2cHandle.Instance->DR = _AsyncXfer.i2c_slave_addr;
-            //I2C_msgSize--;
         }
-        SR1Register = 0;
-        SR2Register = 0;
+        return;
     }
 
-    //if ((SR2Register & I2C_MASK_MSL) == I2C_STATUS_BIT_MASTER)
+    //if ((SR2Register & I2C_MASK_MSL) == I2C_STATUS_BIT_MASTER) //Always true for this driver (Master Mode)
     {
         /* If ADDR = 1, EV6 */
         if ((SR1Register & I2C_MASK_ADDR) == I2C_STATUS_BIT_ADDR)
         {
-            if (_SendMode != I2C_MASTER_RESTART)
+            if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_REG_READ))
             {
                 /* Write the device register address */
                 _I2cHandle.Instance->DR = _AsyncXfer.i2c_slave_reg;
-                //I2C_msgSize--;
 
                 /* If this is receive mode then program start bit here so that repeat start will be generated as soon as
                 ACK is received */
-                if (_SendMode == I2C_MASTER_READ)
+                if (_SendMode == I2C_MASTER_REG_READ)
                 {
                     _SendMode = I2C_MASTER_RESTART;
                     _I2cHandle.Instance->CR1 |= CR1_START_Set;
                 }
-                /* If no further data to be sent, disable the I2C BUF IT
-                in order to not have a TxE  interrupt */
-                if (_AsyncXfer.num == 0)
-                {
-                    _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF; //This will ensure interrupt only when BTF is set (EV8_2)
-                }
             }
-            else if (_AsyncXfer.num == 1)
+            /* Only for Simple READ transaction we need to clear the ACK from master on last byte */
+            if (((_SendMode == I2C_MASTER_RESTART) || (_SendMode == I2C_MASTER_SIMPLE_READ)) && (_AsyncXfer.num == 1))
             {
                 /* Clear ACK */
                 _I2cHandle.Instance->CR1 &= CR1_ACK_Reset;
@@ -409,57 +418,70 @@ void I2C_Driver_ISR_Handler(void)
                 _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
             }
 
-            SR1Register = 0;
-            SR2Register = 0;
+            if ((_SendMode == I2C_MASTER_SIMPLE_WRITE) && (_AsyncXfer.num > 0))
+            {
+                /* Write the data in DR register */
+                _I2cHandle.Instance->DR = _AsyncXfer.pData[_AsyncXfer.byte_index++];
+                /* Decrement the number of data to be written */
+                _AsyncXfer.num--;
+            }
 
+            /* If no further data to be sent, disable the I2C BUF IT
+            in order to not have a TxE  interrupt */
+            if (_AsyncXfer.num == 0)
+            {
+                _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
+            }
+
+
+            return;
         }
 
-        /* Master transmits the remaing data: from data2 until the last one.  */
+        /* Master transmits the remaining data: from data2 until the last one.  */
         /* If TXE is set (EV_8) */
         if ((SR1Register & I2C_MASK_TXE_BTF) == I2C_STATUS_BIT_TXE)
         {
-            if (_SendMode == I2C_MASTER_WRITE)
+            if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_SIMPLE_WRITE))
             {
                 /* If there is still data to write */
                 if (_AsyncXfer.num != 0)
                 {
                     /* Write the data in DR register */
                     _I2cHandle.Instance->DR = _AsyncXfer.pData[_AsyncXfer.byte_index++];
-                    /* Decrment the number of data to be written */
+                    /* Decrement the number of data to be written */
                     _AsyncXfer.num--;
                     /* If  no data remains to write, disable the BUF IT in order
                     to not have again a TxE interrupt. */
                     if (_AsyncXfer.num == 0)
                     {
                         /* Disable the BUF IT */
-                        _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF; //This ensures BTF interrupt (EV8_2)
+                        _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
                     }
                 }
 
             }
 
-            SR1Register = 0;
-            SR2Register = 0;
+            return;
         }
 
         /* If BTF and TXE are set (EV8_2), program the STOP */
         if ((SR1Register & I2C_MASK_TXE_BTF) == (I2C_STATUS_BIT_TXE | I2C_STATUS_BIT_BTF))
         {
-            if (_SendMode == I2C_MASTER_WRITE)
+            if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_SIMPLE_WRITE))
             {
                 /* Program the STOP */
                 _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
                 /* Disable EVT IT In order to not have again a BTF IT */
                 _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_EVT;
                 _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
+#ifdef __CMSIS_RTOS
                 osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_PASSED );
-                //isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#else
+                isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#endif
             }
-            SR1Register = 0;
-            SR2Register = 0;
-
+            return;
         }
-
         /* If RXNE is set */
         if ((SR1Register & I2C_MASK_RXNE) == I2C_STATUS_BIT_RXNE)
         {
@@ -469,8 +491,11 @@ void I2C_Driver_ISR_Handler(void)
                 _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
                 /* Indicate that we are done receiving */
                 _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
+#ifdef __CMSIS_RTOS
                 osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_PASSED );
-                //isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#else
+                isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#endif
             }
             else
             {
@@ -494,13 +519,15 @@ void I2C_Driver_ISR_Handler(void)
                     _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
                     /* Indicate that we are done receiving */
                     _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
+#ifdef __CMSIS_RTOS
                     osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_PASSED );
-                    //isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#else
+                    isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#endif
                 }
             }
 
-            SR1Register = 0;
-            SR2Register = 0;
+            return;
         }
     }
 }
@@ -517,10 +544,12 @@ void I2C_Driver_ISR_Handler(void)
  ***************************************************************************************************/
 void I2C_Driver_ERR_ISR_Handler(void)
 {
+    __IO uint32_t SR2Register = 0;
     __IO uint32_t SR1Register = 0;
 
     /* Read the I2C1 status register */
     SR1Register = _I2cHandle.Instance->SR1;
+    SR2Register = _I2cHandle.Instance->SR2;
 
     /* If AF = 1 */
     if ((SR1Register & I2C_MASK_AF) == I2C_STATUS_BIT_AF)
@@ -548,8 +577,11 @@ void I2C_Driver_ERR_ISR_Handler(void)
         SR1Register = 0;
     }
     _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_FAILED;
+#ifdef __CMSIS_RTOS
     osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_FAILED );
-    //isr_evt_set(I2C_TXRX_STATUS_FAILED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#else
+    isr_evt_set(I2C_TXRX_STATUS_FAILED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#endif
 }
 
 #endif //I2C_DRIVER

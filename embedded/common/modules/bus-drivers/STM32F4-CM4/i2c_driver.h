@@ -1,7 +1,7 @@
 /* OSP Hello World Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,17 +28,22 @@
 #define I2C_ERR_OK                              0
 #define I2C_ERR_BUSY                            1
 #define I2C_ERR_REQ                             2
+#define I2C_ERR_FAIL                            3
+#define I2C_ERR_TIMEOUT                         4
+#define I2C_ERR_ADDR_NAK                        5
 
 
 /*-------------------------------------------------------------------------------------------------*\
  |    T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
 typedef enum _SendModeTag {
-    I2C_MASTER_WRITE,
-    I2C_MASTER_RESTART,
-    I2C_MASTER_READ,
-    I2C_SLAVE_TX,
-    I2C_SLAVE_RX
+    I2C_MASTER_SIMPLE_WRITE,    // Simple write transfer without Re-Start
+    I2C_MASTER_SIMPLE_READ,     // Simple read transfer without Re-Start
+    I2C_MASTER_REG_WRITE,       // Write to specified register of the device (requires re-start)
+    I2C_MASTER_REG_READ,        // Read from specified register of the device (requires re-start)
+    I2C_SLAVE_TX,               // Slave mode transmit
+    I2C_SLAVE_RX,               // Slave mode receive
+    NUM_I2C_MODES
 } I2C_SendMode_t;
 
 /*-------------------------------------------------------------------------------------------------*\
@@ -57,7 +62,7 @@ uint8_t I2C_Transceiver_Busy( void );
 uint8_t I2C_Start_Transfer( uint8_t slaveAddr, uint16_t regAddr, uint8_t *pData, uint16_t dataSize,
                             I2C_SendMode_t sendMode );
 uint8_t I2C_Get_Data_From_Transceiver( uint8_t *, uint8_t );
-void I2C_Wait_Completion( void );
+uint8_t I2C_Wait_Completion( void );
 
 
 #endif /* I2C_DRIVER_H */

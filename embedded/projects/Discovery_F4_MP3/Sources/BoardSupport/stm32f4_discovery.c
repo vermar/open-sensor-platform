@@ -298,7 +298,7 @@ void AUDIO_IO_Write (uint8_t Addr, uint8_t Reg, uint8_t Value)
   uint8_t result;
 
   /* Get the transmit going. Rest is handled in the ISR */
-  result = I2C_Start_Transfer( Addr, Reg, &Value, 1, I2C_MASTER_WRITE );
+  result = I2C_Start_Transfer( Addr, Reg, &Value, 1, I2C_MASTER_REG_WRITE );
   ASF_assert_var(result == I2C_ERR_OK, result, 0, 0);
 
   /* Wait for transfer to finish before returning */
@@ -318,7 +318,7 @@ uint8_t AUDIO_IO_Read(uint8_t Addr, uint8_t Reg)
   uint8_t result;
 
   /* Get the transmit going. Rest is handled in the ISR */
-  result = I2C_Start_Transfer( Addr, Reg, &data, 1, I2C_MASTER_READ );
+  result = I2C_Start_Transfer( Addr, Reg, &data, 1, I2C_MASTER_REG_READ );
   ASF_assert_var(result == I2C_ERR_OK, result, 0, 0);
 
   /* Wait for transfer to finish before returning */

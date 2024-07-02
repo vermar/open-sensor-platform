@@ -1,7 +1,7 @@
 /* OSP Hello World Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -238,16 +238,17 @@ enum _Leds {
 #define I2C_IF_CLK_ENABLE()                     __HAL_RCC_I2C1_CLK_ENABLE()
 #define I2C_IF_FORCE_RESET()                    __HAL_RCC_I2C1_FORCE_RESET()
 #define I2C_IF_RELEASE_RESET()                  __HAL_RCC_I2C1_RELEASE_RESET()
-#define I2C_IF_SDA_GPIO_CLK_ENABLE()            __HAL_RCC_GPIOB_CLK_ENABLE()
-#define I2C_IF_SCL_GPIO_CLK_ENABLE()            __HAL_RCC_GPIOB_CLK_ENABLE() 
+#define I2C_SDA_GPIO_CLK_ENABLE()               __HAL_RCC_GPIOB_CLK_ENABLE()
+#define I2C_SCL_GPIO_CLK_ENABLE()               __HAL_RCC_GPIOB_CLK_ENABLE() 
 
 /* BUS-IO Pins */
-#define I2C_IF_BUS_GPIO_GRP                     GPIOB
 #define RCC_Periph_I2C_IF_BUS_GPIO              RCC_AHB1ENR_GPIOBEN
 /* SCL */
-#define I2C_IF_BUS_CLK_PIN                      GPIO_PIN_6
+#define I2C_IF_BUS_SCL_GPIO_GRP                 GPIOB
+#define I2C_IF_BUS_SCL_GPIO_PIN                 GPIO_PIN_6
 /* SDA */
-#define I2C_IF_BUS_SDA_PIN                      GPIO_PIN_9
+#define I2C_IF_BUS_SDA_GPIO_GRP                 GPIOB
+#define I2C_IF_BUS_SDA_GPIO_PIN                 GPIO_PIN_9
 #define I2C_IF_SCL_SDA_AF                       GPIO_AF4_I2C1
 
 /* DMA & interrupt Channel assignments */
