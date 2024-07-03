@@ -857,9 +857,9 @@ static void Mp3Play( void )
     FILINFO fno;
     DIR dir;
     char *fn; /* This function is assuming non-Unicode cfg. */
-    char buffer[200];
+    char buffer[_MAX_LFN + 1];
     char *path = "";
-    int32_t result;
+    int32_t result = PLAYBACK_STOP;
 #if _USE_LFN //Long File Name option
     static char lfn[_MAX_LFN + 1];
     fno.lfname = lfn;
@@ -898,7 +898,7 @@ static void Mp3Play( void )
             { /* It is a file. */
                 do
                 {
-                    sprintf(buffer, "%s/%s", path, fn);
+                    snprintf(buffer, sizeof(buffer), "%s/%s", path, fn);
                     //D1_printf("File found: %s\r\n", buffer);
 
                     // Check if it is an mp3 file
