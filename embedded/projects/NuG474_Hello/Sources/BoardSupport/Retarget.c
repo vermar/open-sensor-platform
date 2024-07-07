@@ -21,7 +21,7 @@
 #if defined __CC_ARM
 # pragma import(__use_no_semihosting_swi)
 #elif defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
-__asm(".global __use_no_semihosting\n\t");
+__asm(".global __use_no_semihosting_swi\n\t");
 #endif
 
 #if defined (__GNUC__) && !(defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
@@ -36,13 +36,13 @@ set to 'Yes') calls __io_putchar() */
 int32_t ser_putchar (int32_t c);
 int32_t ser_getchar (void);
 
-#if (__ARMCOMPILER_VERSION < 6000000)
+#if !defined(__STRICT_ANSI__)
 struct __FILE { int32_t handle; /* Add whatever you need here */ };
 #endif
 
 FILE __stdout;
 FILE __stdin;
-
+FILE __stderr;
 
 PUTCHAR_PROTOTYPE
 {

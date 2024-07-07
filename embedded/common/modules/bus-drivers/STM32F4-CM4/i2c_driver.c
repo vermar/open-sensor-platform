@@ -175,7 +175,7 @@ static void I2C_HardwareSetup( void )
 
     /* Enable and set I2Cx Error Interrupt to the highest priority */
     HAL_NVIC_SetPriority(I2C_IF_BUS_ERROR_IRQ_CH, I2C_IF_BUS_INT_PREEMPT_PRIORITY, I2C_IF_BUS_ERROR_INT_SUB_PRIORITY);
-    HAL_NVIC_EnableIRQ(I2C_IF_BUS_ERROR_IRQ_CH); 
+    HAL_NVIC_EnableIRQ(I2C_IF_BUS_ERROR_IRQ_CH);
 }
 
 
@@ -368,11 +368,11 @@ void I2C_Driver_ISR_Handler(void)
 {
 
     __IO uint32_t SR1Register;
-    //__IO uint32_t SR2Register;
+    __IO uint32_t SR2Register = 0;
 
     /* Read the I2C SR1 and SR2 status registers */
     SR1Register = _I2cHandle.Instance->SR1;
-    //SR2Register = _I2cHandle.Instance->SR2;
+    SR2Register = _I2cHandle.Instance->SR2;
 
     /* If SB = 1, I2C master sent a START on the bus (EV5) or ReSTART in case of receive */
     if ((SR1Register & I2C_MASK_SB) == I2C_STATUS_BIT_SB)
@@ -391,26 +391,117 @@ void I2C_Driver_ISR_Handler(void)
         return;
     }
 
-    //if ((SR2Register & I2C_MASK_MSL) == I2C_STATUS_BIT_MASTER) //Always true for this driver (Master Mode)
+    /* If ADDR = 1, EV6 */
+    if ((SR1Register & I2C_MASK_ADDR) == I2C_STATUS_BIT_ADDR)
     {
-        /* If ADDR = 1, EV6 */
-        if ((SR1Register & I2C_MASK_ADDR) == I2C_STATUS_BIT_ADDR)
+        if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_REG_READ))
         {
-            if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_REG_READ))
-            {
-                /* Write the device register address */
-                _I2cHandle.Instance->DR = _AsyncXfer.i2c_slave_reg;
+            /* Write the device register address */
+            _I2cHandle.Instance->DR = _AsyncXfer.i2c_slave_reg;
 
-                /* If this is receive mode then program start bit here so that repeat start will be generated as soon as
-                ACK is received */
-                if (_SendMode == I2C_MASTER_REG_READ)
+            /* If this is receive mode then program start bit here so that repeat start will be generated as soon as
+            ACK is received */
+            if (_SendMode == I2C_MASTER_REG_READ)
+            {
+                _SendMode = I2C_MASTER_RESTART;
+                _I2cHandle.Instance->CR1 |= CR1_START_Set;
+            }
+        }
+        /* Only for Simple READ transaction we need to clear the ACK from master on last byte */
+        if (((_SendMode == I2C_MASTER_RESTART) || (_SendMode == I2C_MASTER_SIMPLE_READ)) && (_AsyncXfer.num == 1))
+        {
+            /* Clear ACK */
+            _I2cHandle.Instance->CR1 &= CR1_ACK_Reset;
+            /* Program the STOP */
+            _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
+        }
+
+        if ((_SendMode == I2C_MASTER_SIMPLE_WRITE) && (_AsyncXfer.num > 0))
+        {
+            /* Write the data in DR register */
+            _I2cHandle.Instance->DR = _AsyncXfer.pData[_AsyncXfer.byte_index++];
+            /* Decrement the number of data to be written */
+            _AsyncXfer.num--;
+
+            /* If no further data to be sent, disable the I2C BUF IT
+            in order to not have a TxE  interrupt */
+            if (_AsyncXfer.num == 0)
+            {
+                __HAL_I2C_DISABLE_IT(&_I2cHandle, I2C_IT_BUF);
+            }
+        }
+        return;
+    }
+
+    /* Master transmits the remaining data: from data2 until the last one.  */
+    /* If TXE is set (EV_8) */
+    if ((SR1Register & I2C_MASK_TXE_BTF) == I2C_STATUS_BIT_TXE)
+    {
+        if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_SIMPLE_WRITE))
+        {
+            /* If there is still data to write */
+            if (_AsyncXfer.num != 0)
+            {
+                /* Write the data in DR register */
+                _I2cHandle.Instance->DR = _AsyncXfer.pData[_AsyncXfer.byte_index++];
+                /* Decrement the number of data to be written */
+                _AsyncXfer.num--;
+                /* If  no data remains to write, disable the BUF IT in order
+                to not have again a TxE interrupt. */
+                if (_AsyncXfer.num == 0)
                 {
-                    _SendMode = I2C_MASTER_RESTART;
-                    _I2cHandle.Instance->CR1 |= CR1_START_Set;
+                    /* Disable the BUF IT */
+                    __HAL_I2C_DISABLE_IT(&_I2cHandle, I2C_IT_BUF);
                 }
             }
-            /* Only for Simple READ transaction we need to clear the ACK from master on last byte */
-            if (((_SendMode == I2C_MASTER_RESTART) || (_SendMode == I2C_MASTER_SIMPLE_READ)) && (_AsyncXfer.num == 1))
+
+        }
+
+        return;
+    }
+
+    /* If BTF and TXE are set (EV8_2), program the STOP */
+    if ((SR1Register & I2C_MASK_TXE_BTF) == (I2C_STATUS_BIT_TXE | I2C_STATUS_BIT_BTF))
+    {
+        if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_SIMPLE_WRITE))
+        {
+            /* Program the STOP */
+            _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
+            /* Disable EVT IT In order to not have again a BTF IT */
+            __HAL_I2C_DISABLE_IT(&_I2cHandle, I2C_IT_EVT);
+            _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
+#ifdef __CMSIS_RTOS
+            osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_PASSED );
+#else
+            isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#endif
+        }
+        return;
+    }
+    /* If RXNE is set */
+    if ((SR1Register & I2C_MASK_RXNE) == I2C_STATUS_BIT_RXNE)
+    {
+        if (_AsyncXfer.num == 0) //received all expected data
+        {
+            /* Disable the BUF IT */
+            __HAL_I2C_DISABLE_IT(&_I2cHandle, I2C_IT_BUF);
+            /* Indicate that we are done receiving */
+            _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
+#ifdef __CMSIS_RTOS
+            osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_PASSED );
+#else
+            isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+#endif
+        }
+        else
+        {
+            /* Read the data register */
+            _AsyncXfer.pData[_AsyncXfer.byte_index++] = _I2cHandle.Instance->DR;
+            /* Decrement the number of bytes to be read */
+            _AsyncXfer.num--;
+
+            /* If it remains only one byte to read, disable ACK and program the STOP (EV7_1) */
+            if (_AsyncXfer.num == 1)
             {
                 /* Clear ACK */
                 _I2cHandle.Instance->CR1 &= CR1_ACK_Reset;
@@ -418,77 +509,10 @@ void I2C_Driver_ISR_Handler(void)
                 _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
             }
 
-            if ((_SendMode == I2C_MASTER_SIMPLE_WRITE) && (_AsyncXfer.num > 0))
-            {
-                /* Write the data in DR register */
-                _I2cHandle.Instance->DR = _AsyncXfer.pData[_AsyncXfer.byte_index++];
-                /* Decrement the number of data to be written */
-                _AsyncXfer.num--;
-            }
-
-            /* If no further data to be sent, disable the I2C BUF IT
-            in order to not have a TxE  interrupt */
-            if (_AsyncXfer.num == 0)
-            {
-                _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
-            }
-
-
-            return;
-        }
-
-        /* Master transmits the remaining data: from data2 until the last one.  */
-        /* If TXE is set (EV_8) */
-        if ((SR1Register & I2C_MASK_TXE_BTF) == I2C_STATUS_BIT_TXE)
-        {
-            if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_SIMPLE_WRITE))
-            {
-                /* If there is still data to write */
-                if (_AsyncXfer.num != 0)
-                {
-                    /* Write the data in DR register */
-                    _I2cHandle.Instance->DR = _AsyncXfer.pData[_AsyncXfer.byte_index++];
-                    /* Decrement the number of data to be written */
-                    _AsyncXfer.num--;
-                    /* If  no data remains to write, disable the BUF IT in order
-                    to not have again a TxE interrupt. */
-                    if (_AsyncXfer.num == 0)
-                    {
-                        /* Disable the BUF IT */
-                        _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
-                    }
-                }
-
-            }
-
-            return;
-        }
-
-        /* If BTF and TXE are set (EV8_2), program the STOP */
-        if ((SR1Register & I2C_MASK_TXE_BTF) == (I2C_STATUS_BIT_TXE | I2C_STATUS_BIT_BTF))
-        {
-            if ((_SendMode == I2C_MASTER_REG_WRITE) || (_SendMode == I2C_MASTER_SIMPLE_WRITE))
-            {
-                /* Program the STOP */
-                _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
-                /* Disable EVT IT In order to not have again a BTF IT */
-                _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_EVT;
-                _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
-#ifdef __CMSIS_RTOS
-                osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_PASSED );
-#else
-                isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
-#endif
-            }
-            return;
-        }
-        /* If RXNE is set */
-        if ((SR1Register & I2C_MASK_RXNE) == I2C_STATUS_BIT_RXNE)
-        {
             if (_AsyncXfer.num == 0) //received all expected data
             {
                 /* Disable the BUF IT */
-                _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
+                __HAL_I2C_DISABLE_IT(&_I2cHandle, I2C_IT_BUF);
                 /* Indicate that we are done receiving */
                 _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
 #ifdef __CMSIS_RTOS
@@ -497,38 +521,9 @@ void I2C_Driver_ISR_Handler(void)
                 isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
 #endif
             }
-            else
-            {
-                /* Read the data register */
-                _AsyncXfer.pData[_AsyncXfer.byte_index++] = _I2cHandle.Instance->DR;
-                /* Decrement the number of bytes to be read */
-                _AsyncXfer.num--;
-
-                /* If it remains only one byte to read, disable ACK and program the STOP (EV7_1) */
-                if (_AsyncXfer.num == 1)
-                {
-                    /* Clear ACK */
-                    _I2cHandle.Instance->CR1 &= CR1_ACK_Reset;
-                    /* Program the STOP */
-                    _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
-                }
-
-                if (_AsyncXfer.num == 0) //received all expected data
-                {
-                    /* Disable the BUF IT */
-                    _I2cHandle.Instance->CR2 &= (uint16_t)~I2C_IT_BUF;
-                    /* Indicate that we are done receiving */
-                    _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_PASSED;
-#ifdef __CMSIS_RTOS
-                    osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_PASSED );
-#else
-                    isr_evt_set(I2C_TXRX_STATUS_PASSED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
-#endif
-                }
-            }
-
-            return;
         }
+
+        return;
     }
 }
 
@@ -544,18 +539,26 @@ void I2C_Driver_ISR_Handler(void)
  ***************************************************************************************************/
 void I2C_Driver_ERR_ISR_Handler(void)
 {
-    //__IO uint32_t SR2Register = 0;
+    __IO uint32_t SR2Register = 0;
     __IO uint32_t SR1Register = 0;
+    uint32_t signal = I2C_TXRX_STATUS_FAILED;
+    _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_FAILED;
 
     /* Read the I2C1 status register */
     SR1Register = _I2cHandle.Instance->SR1;
-    //SR2Register = _I2cHandle.Instance->SR2;
+    SR2Register = _I2cHandle.Instance->SR2;
 
     /* If AF = 1 */
     if ((SR1Register & I2C_MASK_AF) == I2C_STATUS_BIT_AF)
     {
         _I2cHandle.Instance->SR1 &= (~I2C_STATUS_BIT_AF);
+        /* Master must generate stop condition on the bus */
+        _I2cHandle.Instance->CR1 |= CR1_STOP_Set;
+        /* Disable buffer interrupt as well */
+        __HAL_I2C_DISABLE_IT(&_I2cHandle, I2C_IT_BUF);
         SR1Register = 0;
+        signal |= I2C_TXRX_STATUS_ADDRNAK;
+        _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_ADDRNAK;
     }
     /* If ARLO = 1 */
     if ((SR1Register & I2C_MASK_ARLO) == I2C_STATUS_BIT_ARLO)
@@ -576,13 +579,13 @@ void I2C_Driver_ERR_ISR_Handler(void)
         _I2cHandle.Instance->SR1 &= (~I2C_STATUS_BIT_OVR);
         SR1Register = 0;
     }
-    _AsyncXfer.i2c_txrx_status = I2C_TXRX_STATUS_FAILED;
 #ifdef __CMSIS_RTOS
-    osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, I2C_TXRX_STATUS_FAILED );
+    osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, signal );
 #else
-    isr_evt_set(I2C_TXRX_STATUS_FAILED, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
+    isr_evt_set(signal, asfTaskHandleTable[I2C_DRIVER_TASK].handle );
 #endif
 }
+
 
 #endif //I2C_DRIVER
 /*-------------------------------------------------------------------------------------------------*\

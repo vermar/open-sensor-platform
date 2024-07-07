@@ -818,41 +818,6 @@ static char *FindPrevious(char *path, char *currFn)
  ***************************************************************************************************/
 static void Mp3Play( void )
 {
-#if 0
-    const char* myFile = "01. (Zero Cult) Neokarma.mp3";
-    char* prevFile;
-
-    prevFile = FindPrevious("Music", (char*)myFile);
-
-#if 0
-    uint32_t fcount = 1;
-    FRESULT fr;     /* Return value */
-    DIR dj;         /* Directory object */
-    FILINFO fno;    /* File information */
-    char* fn;
-#if _USE_LFN //Long File Name option
-    static char lfn[_MAX_LFN + 1];
-    fno.lfname = lfn;
-    fno.lfsize = sizeof(lfn);
-#endif
-
-    D1_printf("Listing all MP3 files:\r\n");
-    fr = f_findfirst(&dj, &fno, "Music", "*.mp3");  /* Start to search for MP3 files */
-
-    while (fr == FR_OK && fno.fname[0]) {         /* Repeat while an item is found */
-#if _USE_LFN
-        fn = *fno.lfname ? fno.lfname : fno.fname;
-#else
-        fn = fno.fname;
-#endif
-        D1_printf("\t[%u]  %s\r\n", fcount, fn);                /* Print the object name */
-        fr = f_findnext(&dj, &fno);               /* Search for next item */
-        fcount++;
-    }
-
-    f_closedir(&dj);
-#endif
-#else
     FRESULT res;
     FILINFO fno;
     DIR dir;
@@ -918,7 +883,6 @@ static void Mp3Play( void )
             }
         }
     }
-#endif
 }
 
 

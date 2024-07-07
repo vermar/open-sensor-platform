@@ -58,7 +58,7 @@
  /* DEBUG macros */
 #if (USBH_DEBUG_LEVEL > 0)
 #define  USBH_UsrLog(...)   D1_printf(__VA_ARGS__);\
-                            D1_printf("\n");
+                            D1_printf("\r\n");
 #else
 #define USBH_UsrLog(...)
 #endif
@@ -68,7 +68,7 @@
 
 #define  USBH_ErrLog(...)   D1_printf("ERROR: ") ;\
                             D1_printf(__VA_ARGS__);\
-                            D1_printf("\n");
+                            D1_printf("\r\n");
 #else
 #define USBH_ErrLog(...)
 #endif
@@ -76,7 +76,7 @@
 #if (USBH_DEBUG_LEVEL > 2)
 #define  USBH_DbgLog(...)   D1_printf("DEBUG : ") ;\
                             D1_printf(__VA_ARGS__);\
-                            D1_printf("\n");
+                            D1_printf("\r\n");
 #else
 #define USBH_DbgLog(...)
 #endif

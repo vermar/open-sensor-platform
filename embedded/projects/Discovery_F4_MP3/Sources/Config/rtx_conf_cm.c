@@ -34,7 +34,7 @@
  * OSP Hello World Project
  * https://github.com/vermar/open-sensor-platform
  *
- * Copyright (C) 2016 Rajiv Verma
+ * Copyright (C) 2024 Rajiv Verma
  *---------------------------------------------------------------------------*/
 
 #include "common.h"

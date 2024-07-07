@@ -506,8 +506,10 @@ osStatus svcKernelInitialize (void) {
 # else /* GCC or Keil compiler */
   register uint32_t *pStack = (uint32_t *)&gStackMem;
   register uint32_t stkSize = (uint32_t)&gStackSize;
+#  if !defined (__CC_ARM) && !defined (__ARMCC_VERSION)
   register uint64_t *pHeap = (uint64_t *)&gHeapStart;
   register uint32_t heapSize = (uint32_t)&gHeapSize;
+#  endif
 # endif
   register uint32_t idx;
 #endif
@@ -521,6 +523,8 @@ osStatus svcKernelInitialize (void) {
 #ifdef ASF_PROFILING
     /* >RKV< This is the best place to initialize stack area for idle task and user tasks with
        known pattern that will be used to check for stack usage */
+// For ARM compilers the heap pattern fill needs to move as this messes the libc heap initialization that happens earlier.
+#if !defined (__CC_ARM) && !defined (__ARMCC_VERSION)
     /* --- Heap Memory --- */
     if (heapSize > sizeof(C_gHeapPattern))
     {
@@ -529,6 +533,7 @@ osStatus svcKernelInitialize (void) {
             *pHeap++ = *((uint64_t *)C_gHeapPattern);
         }
     }
+#endif
 
     /* --- System Stack --- */
     /* This call is using the same stack that we are trying to initialize so we leave the last SYS_STACK_SKIP_SZ bytes */

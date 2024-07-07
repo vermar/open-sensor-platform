@@ -416,41 +416,6 @@ void DebugUARTConfig( uint32_t baud, uint32_t dataLen, uint32_t stopBits, uint32
 
     /* Note that HAL_UART_Init() internally calls HAL_UART_MspInit() to configure the hardware interfaces */
     HAL_UART_Init(gDbgUartPort.hUart);
-
-#if 0
-
-#ifdef UART_DMA_ENABLE
-    /*## -1- Enable DMA2 clock #################################################*/
-    __HAL_RCC_DMA2_CLK_ENABLE();
-
-    /*##-6- Configure NVIC for DMA transfer complete/error interrupts ##########*/
-    /* Set Interrupt Group Priority */
-    HAL_NVIC_SetPriority(DMA_INSTANCE_IRQ, DBG_UART_DMA_INT_PREEMPT_PRIORITY, DBG_UART_TX_DMA_INT_SUB_PRIORITY);
-
-    /* Enable the DMA STREAM global Interrupt */
-    HAL_NVIC_EnableIRQ(DMA_INSTANCE_IRQ);
-#endif
-
-    /* Enable the USART Interrupt */
-    HAL_NVIC_SetPriority(DBG_UART_IRQChannel, DBG_UART_INT_PREEMPT_PRIORITY, DBG_UART_INT_SUB_PRIORITY);
-    HAL_NVIC_EnableIRQ(DBG_UART_IRQChannel);
-    //NVIC_InitStructure.NVIC_IRQChannel = DBG_UART_IRQChannel;
-    //NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = DBG_UART_INT_PREEMPT_PRIORITY;
-    //NVIC_InitStructure.NVIC_IRQChannelSubPriority = DBG_UART_INT_SUB_PRIORITY;
-    //NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    //NVIC_Init(&NVIC_InitStructure);
-
-    /* Enable the USART Receive interrupt: this interrupt is generated when the
-     USART receive data register is not empty. Transmit interrupt is enabled in write routine */
-    //USART_ITConfig(DBG_IF_UART, USART_IT_RXNE, ENABLE);
-    __HAL_UART_ENABLE_IT(_handle, USART_IT_RXNE);
-
-    /* Configure the selected USART port */
-    USART_Init(DBG_IF_UART, &USART_InitStructure);
-
-    /* Enable the selected USART */
-    USART_Cmd(DBG_IF_UART, ENABLE);
-#endif
 }
 
 
@@ -467,44 +432,6 @@ void DebugUARTConfig( uint32_t baud, uint32_t dataLen, uint32_t stopBits, uint32
  ***************************************************************************************************/
 void UartTxDMAStart( PortInfo *pPort, uint8_t *pTxBuffer, uint16_t txBufferSize )
 {
-# if 0
-    /*##-2- Select the DMA functional Parameters ###############################*/
-    DmaHandle.Init.Channel = DMA_CHANNEL;                     /* DMA_CHANNEL_0                    */
-    DmaHandle.Init.Direction = DMA_MEMORY_TO_PERIPH;          /* M2P transfer mode                */
-    DmaHandle.Init.PeriphInc = DMA_PINC_DISABLE;              /* Peripheral increment mode disable */
-    DmaHandle.Init.MemInc = DMA_MINC_ENABLE;                  /* Memory increment mode Enable     */
-    DmaHandle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE; /* Peripheral data alignment : Word */
-    DmaHandle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;    /* memory data alignment : Word     */
-    DmaHandle.Init.Mode = DMA_NORMAL;                         /* Normal DMA mode                  */
-    DmaHandle.Init.Priority = DMA_PRIORITY_LOW;               /* priority level : low             */
-    DmaHandle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;           /* FIFO mode disabled               */
-    DmaHandle.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-    DmaHandle.Init.MemBurst = DMA_MBURST_INC4;                /* Memory burst                     */
-    DmaHandle.Init.PeriphBurst = DMA_MBURST_INC4;             /* Peripheral burst                 */
-
-    /*##-3- Select the DMA instance to be used for the transfer : DMA2_Stream0 #*/
-    DmaHandle.Instance = DMA_INSTANCE;
-
-    /*##-4- Select Callbacks functions called after Transfer complete and Transfer error */
-    DmaHandle.XferCpltCallback  = TransferComplete;
-    DmaHandle.XferErrorCallback = TransferError;
-
-    /*##-5- Initialize the DMA stream ##########################################*/
-    if (HAL_DMA_Init(&DmaHandle) != HAL_OK)
-    {
-        /* Initialization Error */
-        Error_Handler();
-    }
-
-    /*##-7- Start the DMA transfer using the interrupt mode ####################*/
-    /* Configure the source, destination and buffer size DMA fields and Start DMA Stream transfer */
-    /* Enable All the DMA interrupts */
-    if (HAL_DMA_Start_IT(&DmaHandle, (uint32_t)pTxBuffer, (uint32_t)pPort->UartBaseAddress, txBufferSize) != HAL_OK)
-    {
-        /* Transfer Error */
-        Error_Handler();
-    }
-# endif //0
     HAL_StatusTypeDef result;
 
     result = HAL_UART_Transmit_DMA(pPort->hUart, pTxBuffer, txBufferSize);

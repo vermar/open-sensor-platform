@@ -223,9 +223,10 @@ caddr_t _sbrk(int incr)
     }
     prev_heap_end = heap_end;
 
-    if (heap_end + incr > max_heap)
+    char * stack = (char*)__get_MSP();
+    if ((heap_end + incr > stack) || (heap_end + incr > max_heap))
     {
-        _write(STDERR_FILENO, "Heap and Stack collision\r\n", 26);
+        _write(STDERR_FILENO, "Heap Overflow and/or Stack collision\r\n", 38);
         errno = ENOMEM;
         return (caddr_t)-1;
     }

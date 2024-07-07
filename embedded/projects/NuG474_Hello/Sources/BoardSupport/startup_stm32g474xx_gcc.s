@@ -26,35 +26,35 @@
   */
 
   .syntax unified
-	.cpu cortex-m4
-	.fpu softvfp
-	.thumb
+  .cpu cortex-m4
+  .fpu softvfp
+  .thumb
 
-.global	g_pfnVectors
-.global	Default_Handler
+.global  g_pfnVectors
+.global  Default_Handler
 
-/* start address for the initialization values of the .data section.
+/* start address for the initialization values of the .data section. 
 defined in linker script */
-.word	_sidata
-/* start address for the .data section. defined in linker script */
-.word	_sdata
+.word  _sidata
+/* start address for the .data section. defined in linker script */  
+.word  _sdata
 /* end address for the .data section. defined in linker script */
-.word	_edata
+.word  _edata
 /* start address for the .bss section. defined in linker script */
-.word	_sbss
+.word  _sbss
 /* end address for the .bss section. defined in linker script */
-.word	_ebss
+.word  _ebss
 
 /* stack used for SystemInit_ExtMemCtl; always internal RAM used */
 .word gStackMem
 
 /* Heap variables used for stat collection */
-.word	gHeapStart
-.word	gHeapEnd
-.word	gHeapSize
+.word  gHeapStart
+.word  gHeapEnd
+.word  gHeapSize
 
 /* Stack Size for System stack */
-.word gStackSize
+.word  gStackSize
 
 .equ  BootRAM,        0xF1E0F85F
 /**
@@ -66,11 +66,11 @@ defined in linker script */
  * @retval : None
 */
 
-    .section	.text.Reset_Handler
-	.weak	Reset_Handler
-	.type	Reset_Handler, %function
-Reset_Handler:
-  ldr   sp, =gStackMemTop /* set stack pointer */
+    .section  .text.Reset_Handler
+  .weak  Reset_Handler
+  .type  Reset_Handler, %function
+Reset_Handler:  
+  ldr   sp, =gStackMemTop     /* set stack pointer */
 
 /* Copy the data segment initializers from flash to SRAM */
   ldr r0, =_sdata
@@ -117,7 +117,7 @@ LoopFillZerobss:
 LoopForever:
     b LoopForever
 
-.size	Reset_Handler, .-Reset_Handler
+.size  Reset_Handler, .-Reset_Handler
 
 /**
  * @brief  This is the code that gets called when the processor receives an
@@ -127,11 +127,11 @@ LoopForever:
  * @param  None
  * @retval : None
 */
-    .section	.text.Default_Handler,"ax",%progbits
+    .section  .text.Default_Handler,"ax",%progbits
 Default_Handler:
 Infinite_Loop:
-	b	Infinite_Loop
-	.size	Default_Handler, .-Default_Handler
+  b  Infinite_Loop
+  .size  Default_Handler, .-Default_Handler
 /******************************************************************************
 *
 * The minimal vector table for a Cortex-M4.  Note that the proper constructs
