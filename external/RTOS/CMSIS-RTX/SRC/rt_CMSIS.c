@@ -478,8 +478,8 @@ extern uint32_t gStackMem;
 extern uint32_t gStackSize;
 extern uint32_t gHeapStart;
 extern uint32_t gHeapSize;
-const char C_gStackPattern[8] __attribute__((aligned (4))) = "FREESTAK";
-const char C_gHeapPattern[8] __attribute__((aligned (8))) = "EMTYHEAP";
+const char C_gStackPattern[8] __attribute__((aligned (4))) = {'F','R','E','E','S','T','A','K'};
+const char C_gHeapPattern[8] __attribute__((aligned (8))) = {'E','M','T','Y','H','E','A','P'};
 #endif
 
 // Kernel Control Service Calls declarations
@@ -493,6 +493,8 @@ osThreadId   svcThreadCreate  (const osThreadDef_t *thread_def, void *argument);
 osMessageQId svcMessageCreate (const osMessageQDef_t *queue_def, osThreadId thread_id);
 
 // Kernel Control Service Calls
+#define SYS_STACK_SKIP_SZ       128     /* GCC Debug builds can be "fat" on stack usage */
+#define HEAP_FILL_SKIP_SZ       32      /* Based on memory inspection in Keil build after heap is initialized */
 
 /// Initialize the RTOS Kernel for creating objects
 osStatus svcKernelInitialize (void) {
@@ -501,19 +503,16 @@ osStatus svcKernelInitialize (void) {
 # ifdef __ICCARM__
   register uint32_t *pStack = (uint32_t *)gStackMem;
   register uint32_t stkSize = gStackSize;
-  register uint64_t* pHeap = (uint64_t*)gHeapStart;
+  register uint64_t* pHeap = (uint64_t*)gHeapStart + HEAP_FILL_SKIP_SZ/sizeof(uint64_t);
   register uint32_t heapSize = gHeapSize;
 # else /* GCC or Keil compiler */
   register uint32_t *pStack = (uint32_t *)&gStackMem;
   register uint32_t stkSize = (uint32_t)&gStackSize;
-#  if !defined (__CC_ARM) && !defined (__ARMCC_VERSION)
-  register uint64_t *pHeap = (uint64_t *)&gHeapStart;
+  register uint64_t *pHeap = (uint64_t *)&gHeapStart + HEAP_FILL_SKIP_SZ/sizeof(uint64_t);
   register uint32_t heapSize = (uint32_t)&gHeapSize;
-#  endif
 # endif
   register uint32_t idx;
 #endif
-#define SYS_STACK_SKIP_SZ       128     /* GCC Debug builds can be "fat" on stack usage */
 
   if (os_initialized == 0U) {
 
@@ -523,23 +522,22 @@ osStatus svcKernelInitialize (void) {
 #ifdef ASF_PROFILING
     /* >RKV< This is the best place to initialize stack area for idle task and user tasks with
        known pattern that will be used to check for stack usage */
-// For ARM compilers the heap pattern fill needs to move as this messes the libc heap initialization that happens earlier.
-#if !defined (__CC_ARM) && !defined (__ARMCC_VERSION)
     /* --- Heap Memory --- */
-    if (heapSize > sizeof(C_gHeapPattern))
+    if (heapSize > HEAP_FILL_SKIP_SZ)
     {
+        heapSize -= HEAP_FILL_SKIP_SZ;
         for ( idx = 0; idx < (heapSize/sizeof(C_gHeapPattern)); idx++)
         {
             *pHeap++ = *((uint64_t *)C_gHeapPattern);
         }
     }
-#endif
 
     /* --- System Stack --- */
     /* This call is using the same stack that we are trying to initialize so we leave the last SYS_STACK_SKIP_SZ bytes */
     if (stkSize > SYS_STACK_SKIP_SZ)
     {
-        for ( idx = 0; idx < ((stkSize-SYS_STACK_SKIP_SZ)/sizeof(C_gStackPattern)); idx++)
+        stkSize -= SYS_STACK_SKIP_SZ;
+        for ( idx = 0; idx < (stkSize/sizeof(C_gStackPattern)); idx++)
         {
             *pStack++ = *((uint32_t *)C_gStackPattern);
             *pStack++ = *((uint32_t *)(C_gStackPattern+4));
