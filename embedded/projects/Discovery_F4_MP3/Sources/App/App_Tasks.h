@@ -51,7 +51,7 @@
 /* NOTE: STACK_INCREASE can be used to increase the stack size of all tasks by a constant amount.
    This value is set in rtx_conf_cm.c file and is normally 0. Use this for Debugging crashes */
 ASF_TASK_STATIC (USBH_IF_TASK_ID,       UsbHostTask,        osPriorityNormal,  (0x500+STACK_INCREASE),  4)
-ASF_TASK_STATIC (MP3_APP_TASK_ID,       Mp3PlayerTask,      osPriorityRealtime,  (0xD00+STACK_INCREASE),  16)
+ASF_TASK_STATIC (MP3_APP_TASK_ID,       Mp3PlayerTask,      osPriorityRealtime,  (0xE00+STACK_INCREASE),  16)
 
 
 
