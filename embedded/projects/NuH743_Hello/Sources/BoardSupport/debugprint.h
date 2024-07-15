@@ -15,48 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if !defined (HW_SETUP_H)
-#define   HW_SETUP_H
+#if !defined (DEBUGPRINT_H)
+#define   DEBUGPRINT_H
 
 /*-------------------------------------------------------------------------------------------------*\
  |    I N C L U D E   F I L E S
 \*-------------------------------------------------------------------------------------------------*/
-
-#ifdef DISCOVERY_L1_BOARD
-# include "hw_setup_discovery_l1.h"
-#endif
-
-#ifdef STEVAL_MKI109V2
-# include "hw_setup_steval_mki109v2.h"
-#endif
-
-#ifdef XPRESSO_LPC54102_BOARD
-# include "hw_setup_xpresso_lpc54102.h"
-#endif
-
-#ifdef DISCOVERY_F4_BOARD
-# include "hw_setup_discovery_f4.h"
-#endif
-
-#ifdef NUCLEO_L452RE_BOARD
-# include "hw_setup_nucleo_l452.h"
-#endif
-
-#ifdef DISCOVERY_L476_BOARD
-# include "hw_setup_discovery_l476.h"
-#endif
-
-#ifdef NUCLEO_F746_BOARD
-# include "hw_setup_nucleo_f746.h"
-#endif
-
-#ifdef NUCLEO_G474RE_BOARD
-# include "hw_setup_nucleo_g474.h"
-#endif
-
-#ifdef NUCLEO_H743ZI_BOARD
-# include "hw_setup_nucleo_h743.h"
-#endif
+#include "common.h"
 
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
@@ -77,14 +42,72 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   F U N C T I O N   D E C L A R A T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-void SystemGPIOConfig( void );
-void SystemInterruptConfig( void );
-void DebugPortInit( void );
-void DebugUARTConfig( uint32_t baud, uint32_t dataLen, uint32_t stopBits, uint32_t parity );
-void RTC_Configuration( void );
+/* Platform/Device dependent macros & functions */
+void UartTxDMAStart( PortInfo *pPort, uint8_t *pTxBuffer, uint16_t txBufferSize );
+void RxBytesToBuff( PortInfo *pPort, uint8_t byte );
+
+#ifndef UART_DMA_ENABLE
+/* Support functions for DEBUG Uart */
+static __inline void DisableDbgUartInterrupt( void ) {
+    NVIC_DisableIRQ(DBG_UART_IRQn);
+}
+
+static __inline void EnableDbgUartInterrupt( void ) {
+    NVIC_EnableIRQ(DBG_UART_IRQn);
+}
+#endif
+
+#ifdef UART_DMA_ENABLE
+static __inline void EnableDbgUartDMAxferCompleteInt( void ) {
+    /* Not used as HAL_UART_Transmit_DMA() handles it internally */
+}
+
+static __inline void EnableDbgUartDMAChannel( void ) {
+    /* Not used as HAL_UART_Transmit_DMA() handles it internally */
+}
+
+static __inline void DisableDbgUartDMAChannel( void ) {
+    /* Not used - handled by HAL driver */
+}
+
+static __inline void EnableDbgUartDMATxRequest( void ) {
+    /* Not used - handled by HAL driver */
+}
+#endif
+
+static __inline void DbgUartSendByte( uint8_t byte ) {
+    gDbgUartPort.hUart->Instance->TDR = byte;
+}
+
+static __inline uint8_t DbgUartReadByte( void ) {
+    return ((uint8_t)(gDbgUartPort.hUart->Instance->RDR & (uint8_t)0xFF));
+}
+
+static __inline osp_bool_t DbgUartTransmitBufferEmpty( void ) {
+    if (__HAL_UART_GET_FLAG(gDbgUartPort.hUart, UART_FLAG_TXE) == TRUE) {
+        return true;
+    }
+    return false;
+}
+
+static __inline osp_bool_t DbgUartReceiveBufferFull( void ) {
+    if (__HAL_UART_GET_FLAG(gDbgUartPort.hUart, UART_FLAG_RXNE) == TRUE) {
+        return true;
+    }
+    return false;
+}
+
+static __inline void EnableDbgUartTxBufferEmptyInterrupt( void ) {
+    __HAL_UART_ENABLE_IT(gDbgUartPort.hUart, UART_IT_TXE);
+}
+
+static __inline void DisableDbgUartTxBufferEmptyInterrupt( void ) {
+    __HAL_UART_DISABLE_IT(gDbgUartPort.hUart, UART_IT_TXE);
+}
 
 
-#endif /* HW_SETUP_H */
+
+#endif /* DEBUGPRINT_H */
 /*-------------------------------------------------------------------------------------------------*\
  |    E N D   O F   F I L E
 \*-------------------------------------------------------------------------------------------------*/

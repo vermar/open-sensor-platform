@@ -15,56 +15,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if !defined (HW_SETUP_H)
-#define   HW_SETUP_H
+#if !defined (APPMSGSTRUCT_H)
+#define   APPMSGSTRUCT_H
 
 /*-------------------------------------------------------------------------------------------------*\
  |    I N C L U D E   F I L E S
 \*-------------------------------------------------------------------------------------------------*/
-
-#ifdef DISCOVERY_L1_BOARD
-# include "hw_setup_discovery_l1.h"
-#endif
-
-#ifdef STEVAL_MKI109V2
-# include "hw_setup_steval_mki109v2.h"
-#endif
-
-#ifdef XPRESSO_LPC54102_BOARD
-# include "hw_setup_xpresso_lpc54102.h"
-#endif
-
-#ifdef DISCOVERY_F4_BOARD
-# include "hw_setup_discovery_f4.h"
-#endif
-
-#ifdef NUCLEO_L452RE_BOARD
-# include "hw_setup_nucleo_l452.h"
-#endif
-
-#ifdef DISCOVERY_L476_BOARD
-# include "hw_setup_discovery_l476.h"
-#endif
-
-#ifdef NUCLEO_F746_BOARD
-# include "hw_setup_nucleo_f746.h"
-#endif
-
-#ifdef NUCLEO_G474RE_BOARD
-# include "hw_setup_nucleo_g474.h"
-#endif
-
-#ifdef NUCLEO_H743ZI_BOARD
-# include "hw_setup_nucleo_h743.h"
-#endif
+#include <stdint.h>
 
 /*-------------------------------------------------------------------------------------------------*\
  |    C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
+#define NUM_CMD_ARGS                5
+#define COMMAND_LINE_SIZE           32  //Match the define in Main.h
 
 /*-------------------------------------------------------------------------------------------------*\
  |    T Y P E   D E F I N I T I O N S
 \*-------------------------------------------------------------------------------------------------*/
+#pragma pack(push)  /* push current alignment to stack */
+#pragma pack(4)
+
+typedef struct MsgIntEvtIndTag
+{
+    uint32_t     timeStamp;
+    uint32_t     deviceId;
+} MsgIntEvtInd;
+
+/* Console command input structure */
+#if defined (__CC_ARM)
+# pragma anon_unions
+#endif
+typedef struct _MsgCliCmd
+{
+    char        cmd;                  /* Command identifier */
+    union _CVal
+    {
+        int32_t value[NUM_CMD_ARGS];  /* Value for the command */
+        char    cmdStr[COMMAND_LINE_SIZE]; /* Command String sans cmd part */
+    } u;
+} MsgCliCmd_t;
 
 /*-------------------------------------------------------------------------------------------------*\
  |    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
@@ -77,14 +66,10 @@
 /*-------------------------------------------------------------------------------------------------*\
  |    P U B L I C   F U N C T I O N   D E C L A R A T I O N S
 \*-------------------------------------------------------------------------------------------------*/
-void SystemGPIOConfig( void );
-void SystemInterruptConfig( void );
-void DebugPortInit( void );
-void DebugUARTConfig( uint32_t baud, uint32_t dataLen, uint32_t stopBits, uint32_t parity );
-void RTC_Configuration( void );
 
+#pragma pack(pop)   /* restore original alignment from stack */
 
-#endif /* HW_SETUP_H */
+#endif /* APPMSGSTRUCT_H */
 /*-------------------------------------------------------------------------------------------------*\
  |    E N D   O F   F I L E
 \*-------------------------------------------------------------------------------------------------*/
