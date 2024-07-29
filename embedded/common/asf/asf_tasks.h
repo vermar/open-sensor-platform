@@ -52,7 +52,7 @@
 /* Declare all ASF tasks here */
 /* InstrManagerTask creates other tasks and OS resources and must always be first task declared */
 /* Note that InstrManagerTask is same as 'main' task in CMSIS-RTOS implementation */
-#if defined (__GNUC__) /* GCC library overhead is higher requiring larger stack */
+#if defined (__GNUC__) && !defined (__ARMCC_VERSION) /* GCC library overhead is higher requiring larger stack */
 ASF_TASK_STATIC ( INSTR_MANAGER_TASK_ID,  InstrManagerTask,   osPriorityIdle,  0x600,    4 )
 
 /* Handles command input from UART */

@@ -50,11 +50,17 @@
 /* Declare additional application specific tasks here */
 /* NOTE: STACK_INCREASE can be used to increase the stack size of all tasks by a constant amount.
    This value is set in rtx_conf_cm.c file and is normally 0. Use this for Debugging crashes */
-ASF_TASK_STATIC (LED_ON_TASK_ID,        LED_On_Task,        osPriorityNormal,  (0x100+STACK_INCREASE),  4)
-ASF_TASK_STATIC (LED_OFF_TASK_ID,       LED_Off_Task,       osPriorityNormal,  (0x100+STACK_INCREASE),  4)
+ASF_TASK_STATIC (LED_ON_TASK_ID,          LED_On_Task,         osPriorityNormal,       (0x100+STACK_INCREASE),  4)
+ASF_TASK_STATIC (LED_OFF_TASK_ID,         LED_Off_Task,        osPriorityNormal,       (0x100+STACK_INCREASE),  4)
+
+#if defined (__GNUC__) && !defined (__ARMCC_VERSION) /* GCC library overhead is higher requiring larger stack */
+ASF_TASK_STATIC (FACTORY_TEST_TASK_ID,    FactoryModeTask,     osPriorityLow,          (0x600+STACK_INCREASE),  4)
+#else
+ASF_TASK_STATIC (FACTORY_TEST_TASK_ID,    FactoryModeTask,     osPriorityLow,          (0x400+STACK_INCREASE),  4)
+#endif
 
 #ifdef INCLUDE_TEST_TASK
-ASF_TASK_STATIC (TEST_TASK_ID,          LED_Test_Task,      osPriorityNormal,  (0x400+STACK_INCREASE),  4)
+ASF_TASK_STATIC (TEST_TASK_ID,            LED_Test_Task,       osPriorityNormal,       (0x400+STACK_INCREASE),  4)
 #endif
 
 
