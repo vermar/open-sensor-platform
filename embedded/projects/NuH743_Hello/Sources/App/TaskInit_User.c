@@ -45,6 +45,7 @@ static const uint8_t NormalModeTaskList[] = {
     CMD_HNDLR_TASK_ID,
     LED_ON_TASK_ID,
     LED_OFF_TASK_ID,
+    FACTORY_TEST_TASK_ID,
 #ifdef INCLUDE_TEST_TASK
     TEST_TASK_ID
 #endif

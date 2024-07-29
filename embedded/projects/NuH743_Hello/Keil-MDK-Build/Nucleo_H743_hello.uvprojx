@@ -338,7 +338,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>-Wno-unused-parameter -Wno-format -Wno-sign-compare</MiscControls>
-              <Define>__FPU_PRESENT=1U,__CORTEX_M4F,__CMSIS_RTOS,DEBUG_BUILD,UART_DMA_ENABLE,USE_HAL_DRIVER,STM32H743xx,NUCLEO_H743ZI_BOARD,ON_DEMAND_PROFILING,ASF_PROFILING,INCLUDE_TEST_TASK</Define>
+              <Define>__FPU_PRESENT=1U,__CORTEX_M4F,__CMSIS_RTOS,DEBUG_BUILD,UART_DMA_ENABLE,USE_HAL_DRIVER,STM32H743xx,NUCLEO_H743ZI_BOARD,ON_DEMAND_PROFILING,ASF_PROFILING,n_INCLUDE_TEST_TASK</Define>
               <Undefine></Undefine>
               <IncludePath>..\Sources\App;..\Sources\Config;..\Sources\BoardSupport;..\..\..\..\include;..\..\..\common\app;..\..\..\common\asf;..\..\..\..\external\MCU\CMSIS\Include;..\..\..\..\external\RTOS\CMSIS-RTX\INC;..\..\..\..\external\RTOS\CMSIS-RTX\SRC;..\..\..\..\external\MCU\STM32H7-CM7\HAL\Inc;..\..\..\..\external\MCU\CMSIS\Device\ST\STM32H7xx\Include</IncludePath>
             </VariousControls>
@@ -623,6 +623,11 @@
               <FileName>InstrMgr_User.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Sources\App\InstrMgr_User.c</FilePath>
+            </File>
+            <File>
+              <FileName>FactoryTest_T.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Sources\App\FactoryTest_T.c</FilePath>
             </File>
           </Files>
         </Group>

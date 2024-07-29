@@ -87,7 +87,6 @@
 /* ########################################################################## */
 /* #    G P I O  I N T E R F A C E S / A S S I G N M E N T S                # */
 /* ########################################################################## */
-/* Diagnostic GPIOs */
 /* Note: For each GPIO enum defined here there should be a corresponding initialization
  * of OutputGPIOs[] struct array in hw_setup.c file in the order as these enums.
  */
@@ -100,6 +99,7 @@ enum _GpioOutputs
 enum _GpioInputs
 {
     GPIO_IN_USR_BTN,         //User blue button
+    GPIO_IN_CN9_IO1,         //Left IO marked signal on CN9
     NUM_GPIO_INPUTS
 };
 
@@ -111,6 +111,10 @@ enum _Leds {
     NUM_LEDS
 };
 
+/* Input mode muxing to support analog input option with "pull-mode" */
+#define GPIO_IN_MODE_ANALOG                     ((GPIO_MODE_ANALOG << 8) | GPIO_NOPULL)
+#define GPIO_IN_PULLMODE_MASK                   0xFF
+#define M_CheckAnalogMode(pm)                   ((((pm) >> 8) & 0xFF) == GPIO_MODE_ANALOG)
 
 /* User Friendly LED designation - unused ones should be assigned 0xFF */
 #define FRONT_LED                               LED_GREEN
@@ -128,6 +132,12 @@ enum _Leds {
         DiagLEDs[led].grp->BSRR = (uint32_t)DiagLEDs[led].pin << 16; \
     }
 
+#define LED_Toggle(led)                              \
+    if (led < NUM_LEDS)                              \
+    {                                                \
+        DiagLEDs[led].grp->ODR ^= DiagLEDs[led].pin; \
+    }
+
 #define GPIO_SetHigh(gpio)                                   \
     if (gpio < NUM_GPIO_OUTPUTS)                             \
     {                                                        \
@@ -138,12 +148,6 @@ enum _Leds {
     if (gpio < NUM_GPIO_OUTPUTS)                                             \
     {                                                                        \
         OutputGPIOs[gpio].grp->BSRR = (uint32_t)OutputGPIOs[gpio].pin << 16; \
-    }
-
-#define LED_Toggle(led)                              \
-    if (led < NUM_LEDS)                              \
-    {                                                \
-        DiagLEDs[led].grp->ODR ^= DiagLEDs[led].pin; \
     }
 
 #define RCC_GPIO_CLK_ENABLE(rcc_gpio)                      \
@@ -157,8 +161,11 @@ enum _Leds {
     } while (0)
 
 /* GPIO Input Macros for reading values */
-#define GPIO_GetState(gpioIn)                              \
+#define GPIO_GetInputState(gpioIn)                          \
     HAL_GPIO_ReadPin(InputGPIOs[gpioIn].grp, InputGPIOs[gpioIn].pin)
+
+#define GPIO_GetOutputState(gpioIn)                          \
+    HAL_GPIO_ReadPin(OutputGPIOs[gpioIn].grp, OutputGPIOs[gpioIn].pin)
 
 /* Assert LED assignment */
 #define AssertIndication()                      LED_On(LED_RED)
@@ -248,7 +255,7 @@ enum _Leds {
 /* ########################################################################## */
 /* #    M I S C E L L A N E O U S                                           # */
 /* ########################################################################## */
-/* Device Unique ID register for STM32F7 series devices */
+/* Device Unique ID register for STM32H7 series devices */
 #define DEV_UID_OFFSET                          0x1FF0F420
 #define DBG_MCU_IDCODE_OFFSET                   0xE0042000
 
@@ -267,11 +274,13 @@ typedef union DeviceUidTag
 typedef enum _GPIO_State
 {
     GPIO_STATE_LOW,
-    GPIO_STATE_HIGH
+    GPIO_STATE_HIGH,
+    GPIO_INVALID
 } GpioState_t;
 
 typedef struct _GPIO_OutputInfo
 {
+    const char*     schRef;     //Schematic reference name
     GPIO_TypeDef*   grp;
     uint16_t        pin;
     GpioState_t     initState; //LOW/HIGH
@@ -280,19 +289,34 @@ typedef struct _GPIO_OutputInfo
 
 typedef struct _GPIO_InputInfo
 {
+    const char*     schRef;     //Schematic reference name
     GPIO_TypeDef*   grp;
     uint16_t        pin;
     uint32_t        pullMode;  //Pull-up/Pull-down/No-pull
     uint16_t        hwCompat;  //Compatibility mask
 } GPioInputInfo_t;
 
+/* Interrupt configuration */
+typedef enum _ExtInterruptId
+{
+    USER_BUTTON_PRESS = GPIO_IN_USR_BTN,
+    DBG_TEST_INPUT = GPIO_IN_CN9_IO1,   //Left edge IO signal on CN9 connector
+} ExtIntId_t;
+
+typedef enum _IntTriggerType
+{
+    INT_EDGE_NOT_CONFIGURABLE,
+    INT_TRIGGER_FALLING_EDGE,
+    INT_TRIGGER_RISING_EDGE
+} IntTrigger_t;
+
 //==================================================================================================
 //    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
 //==================================================================================================
 extern DeviceUid_t *gDevUniqueId;
-extern GPioOutputInfo_t DiagLEDs[NUM_LEDS];
-extern GPioOutputInfo_t OutputGPIOs[NUM_GPIO_OUTPUTS];
-extern GPioInputInfo_t InputGPIOs[NUM_GPIO_INPUTS];
+extern const GPioOutputInfo_t DiagLEDs[NUM_LEDS];
+extern const GPioOutputInfo_t OutputGPIOs[NUM_GPIO_OUTPUTS];
+extern const GPioInputInfo_t InputGPIOs[NUM_GPIO_INPUTS];
 
 //==================================================================================================
 //    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
@@ -308,6 +332,10 @@ void DebugUARTConfig( uint32_t baud, uint32_t dataLen, uint32_t stopBits, uint32
 void LED_Init( uint16_t hwRev );
 void MPU_Config( void );
 void CPU_CACHE_Enable( void );
+void DumpGpioInputStatusAll(void);
+void DumpGpioOutputStatusAll(void);
+GpioState_t GetGpioStateByName(const char* schRef);
+void SetGpioStateByName(const char* schRef, GpioState_t state);
 
 #endif /* HW_SETUP_NUCLEO_H743_H */
 //==================================================================================================

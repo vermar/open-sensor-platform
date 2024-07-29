@@ -89,10 +89,10 @@ static void SendProfilingReq( void )
  ***************************************************************************************************/
 void CmdParse_User( int8_t *pBuffer, uint16_t size, uint16_t event )
 {
-    //MessageBuffer* pSendMsg = NULLP;
-    //AsfResult_t result;
-    //int32_t numScanned;
-    //MsgCliCmd_t cliCmd = { 0 };
+    MessageBuffer* pSendMsg = NULLP;
+    AsfResult_t result;
+    int32_t numScanned;
+    MsgCliCmd_t cliCmd = { 0 };
     static uint8_t *pHistCmd = NULL;
     static int8_t histReadIdx = -1;
     static uint8_t histCnt = 0;
@@ -177,18 +177,24 @@ void CmdParse_User( int8_t *pBuffer, uint16_t size, uint16_t event )
         histCnt = 0;
         histReadIdx = -1;
         pHistCmd = NULL;
-#if 0
-        numScanned = sscanf((char*)pBuffer, "cmd=%c,%ld,%ld,%ld", &cliCmd.cmd, &cliCmd.value, &cliCmd.value2,
-            &cliCmd.value3);
-        if ((numScanned > 0) && (numScanned <= 4))
+
+        numScanned = sscanf((char*)pBuffer, "cmd=%c,%ld,%ld,%ld,%ld,%ld", &cliCmd.cmd, &cliCmd.u.value[0], &cliCmd.u.value[1],
+            &cliCmd.u.value[2], &cliCmd.u.value[3], &cliCmd.u.value[4]);
+        if ((numScanned > 0) && (numScanned <= 6))
         {
             result = ASFCreateMessage(MSG_CLI_CMD, sizeof(MsgCliCmd_t), &pSendMsg);
             ASF_assert(result == ASF_OK);
             pSendMsg->msg.msgCliCmd = cliCmd;
-            result = ASFSendMessage(MP3_APP_TASK_ID, pSendMsg);
+            if ((numScanned == 1) && (size > CMD_EXTRA_OPTIONS_START))
+            {
+                /* We likely have a string argument beyond the command identifier. Just pass it to the
+                * handler task */
+                strncpy(pSendMsg->msg.msgCliCmd.u.cmdStr, (char*)&pBuffer[CMD_EXTRA_OPTIONS_START],
+                    COMMAND_LINE_SIZE);
+            }
+            result = ASFSendMessage(FACTORY_TEST_TASK_ID, pSendMsg);
             ASF_assert(result == ASF_OK);
         }
-#endif
     }
 }
 

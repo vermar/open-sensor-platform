@@ -22,6 +22,7 @@
 //==================================================================================================
 #include "common.h"
 #include "debugprint.h"
+#include <string.h>
 
 //==================================================================================================
 //    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
@@ -40,6 +41,7 @@ extern const uint32_t __bss_start__[]; //TBD - fix for GCC
 //    P R I V A T E   C O N S T A N T S   &   M A C R O S
 //==================================================================================================
 #define FREQ_1MHZ                       1000000
+#define RTC_INITIAL_COUNT               0
 
 //==================================================================================================
 //    P R I V A T E   T Y P E   D E F I N I T I O N S
@@ -59,41 +61,53 @@ static TIM_HandleTypeDef s_hRtcTimer;
 //==================================================================================================
 DeviceUid_t *gDevUniqueId = (DeviceUid_t *)(DEV_UID_OFFSET);
 
-GPioOutputInfo_t OutputGPIOs[NUM_GPIO_OUTPUTS] =
+const GPioOutputInfo_t OutputGPIOs[NUM_GPIO_OUTPUTS] =
 {
     { //USB Power Enable
-        GPIOD,
-        GPIO_PIN_10,
-        GPIO_STATE_LOW,
-        HW_REV_COMMON
+        "USB_FS_PWR_EN",        //Schematic name
+        GPIOD,                  //Port
+        GPIO_PIN_10,            //Pin
+        GPIO_STATE_LOW,         //Initial state (on power-up)
+        HW_REV_COMMON           //HW version this applies to
     }
 };
 
-GPioInputInfo_t InputGPIOs[NUM_GPIO_INPUTS] =
+const GPioInputInfo_t InputGPIOs[NUM_GPIO_INPUTS] =
 {
     { //GPIO_IN_USR_BTN - User Button (Blue)
+        "USER_BUTTON",          //Also marked as WAKEUP_KEY or USER
         GPIOC,
         GPIO_PIN_13,
         GPIO_PULLDOWN,
         HW_REV_COMMON
     },
+    { //GPIO_IN_CN9_IO1
+        "IO (PG0)",
+        GPIOG,
+        GPIO_PIN_0,
+        GPIO_PULLDOWN,
+        HW_REV_COMMON
+    },
 };
 
-GPioOutputInfo_t DiagLEDs[NUM_LEDS] =
+const GPioOutputInfo_t DiagLEDs[NUM_LEDS] =
 {
     { //LED_GREEN (LD1)
+        "LED GREEN",
         GPIOB,
         GPIO_PIN_0,
         GPIO_STATE_LOW,
         HW_REV_COMMON
     },
     { //LED_RED (LD3)
+        "LED RED",
         GPIOB,
         GPIO_PIN_14,
         GPIO_STATE_LOW,
         HW_REV_COMMON
     },
     { //LED_YELLOW (LD2)
+        "LED YELLOW",
         GPIOE,
         GPIO_PIN_1,
         GPIO_STATE_LOW,
@@ -307,9 +321,16 @@ static void GPIO_InputInit(uint16_t hwRev)
             if (InputGPIOs[index].hwCompat & hwRev)
             {
                 enableRcc_GPIOx(InputGPIOs[index].grp);
-                gpioInit.Pin   = InputGPIOs[index].pin;
-                gpioInit.Mode  = GPIO_MODE_INPUT;
-                gpioInit.Pull  = InputGPIOs[index].pullMode;
+                gpioInit.Pin = InputGPIOs[index].pin;
+                if (M_CheckAnalogMode(InputGPIOs[index].pullMode))
+                {
+                    gpioInit.Mode = GPIO_MODE_ANALOG;
+                }
+                else
+                {
+                    gpioInit.Mode = GPIO_MODE_INPUT;
+                }
+                gpioInit.Pull  = InputGPIOs[index].pullMode & GPIO_IN_PULLMODE_MASK;
                 gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
                 HAL_GPIO_Init(InputGPIOs[index].grp, &gpioInit);
             }
@@ -334,6 +355,7 @@ static uint32_t GetTimerClock(TIM_TypeDef *pTim)
     HAL_RCC_GetClockConfig(&clkConfig, &pFLatency);
 
     /* NOTE: Timer availability depends on actual part number of the MCU */
+    /* STM32H7xx series timers: */
     /* 32-Bit Timers: 2, 5 */
     /* 16-Bit Timers: 1, 3, 4, 6-14 */
     /* Adv. Control Timers: 1, 8 */
@@ -485,10 +507,10 @@ void SystemClock_Config(void)
     clkInit.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
     clkInit.SYSCLKDivider  = RCC_SYSCLK_DIV1;
     clkInit.AHBCLKDivider  = RCC_HCLK_DIV2;
-    clkInit.APB3CLKDivider = RCC_APB3_DIV2;  
-    clkInit.APB1CLKDivider = RCC_APB1_DIV2; 
-    clkInit.APB2CLKDivider = RCC_APB2_DIV2; 
-    clkInit.APB4CLKDivider = RCC_APB4_DIV2; 
+    clkInit.APB3CLKDivider = RCC_APB3_DIV2;
+    clkInit.APB1CLKDivider = RCC_APB1_DIV2;
+    clkInit.APB2CLKDivider = RCC_APB2_DIV2;
+    clkInit.APB4CLKDivider = RCC_APB4_DIV2;
 
     ret = HAL_RCC_ClockConfig(&clkInit, FLASH_LATENCY_4);
     ASF_assert(ret == HAL_OK);
@@ -522,6 +544,161 @@ void SystemInterruptConfig( void )
 }
 
 /***************************************************************************************************
+** @brief Prints the status of all GPIO input signals defined under "InputGPIOs"
+**
+** @param None
+**
+** @return None
+*/
+void DumpGpioInputStatusAll(void)
+{
+    uint16_t index;
+    uint16_t hwRevMask = (1 << gHardwareRev) | HW_REV_COMMON;
+
+    D0_printf(G_BLACK_BOLD"All GPIO Inputs State:\r\n"G_NORM);
+    for (index = 0; index < NUM_GPIO_INPUTS; index++)
+    {
+        if (InputGPIOs[index].hwCompat & hwRevMask)
+        {
+            /* Analog mode signals are prefixed by '*' and their status read as digital input */
+            D0_printf("\t%c%15s : %u\r\n", InputGPIOs[index].pullMode == GPIO_IN_MODE_ANALOG ? '*' : ' ',
+                InputGPIOs[index].schRef, GPIO_GetInputState(index));
+        }
+    }
+}
+
+/***************************************************************************************************
+** @brief Prints the status of all GPIO output signals defined under "OutputGPIOs"
+**
+** @param None
+**
+** @return None
+*/
+void DumpGpioOutputStatusAll(void)
+{
+    uint16_t index;
+    uint16_t hwRevMask = (1 << gHardwareRev) | HW_REV_COMMON;
+
+    D0_printf(G_BLACK_BOLD"All GPIO Outputs State:\r\n"G_NORM);
+    for (index = 0; index < NUM_GPIO_OUTPUTS; index++)
+    {
+        if (OutputGPIOs[index].hwCompat & hwRevMask)
+        {
+            D0_printf("\t%16s : %u\r\n", OutputGPIOs[index].schRef, GPIO_GetOutputState(index));
+        }
+    }
+}
+
+/***************************************************************************************************
+** @brief Returns the status of a given GPIO signal name (schematic reference)
+**
+** @param schRef: Schematic reference name
+**
+** @return GPIO_STATE_LOW or GPIO_STATE_HIGH if GPIO name found; GPIO_INVALID if not found
+*/
+GpioState_t GetGpioStateByName(const char* schRef)
+{
+    uint16_t index;
+    uint16_t hwRevMask = (1 << gHardwareRev) | HW_REV_COMMON;
+
+    if (!schRef)
+    {
+        return GPIO_INVALID;
+    }
+
+    for (index = 0; index < NUM_GPIO_OUTPUTS; index++)
+    {
+        if (strcmp(OutputGPIOs[index].schRef, schRef) == 0)
+        {
+            if (!(OutputGPIOs[index].hwCompat & hwRevMask))
+            {
+                return GPIO_INVALID;
+            }
+            return HAL_GPIO_ReadPin(OutputGPIOs[index].grp, OutputGPIOs[index].pin) == GPIO_PIN_SET ? GPIO_STATE_HIGH : GPIO_STATE_LOW;
+        }
+    }
+
+    for (index = 0; index < NUM_GPIO_INPUTS; index++)
+    {
+        if (strcmp(InputGPIOs[index].schRef, schRef) == 0)
+        {
+            if (!(InputGPIOs[index].hwCompat & hwRevMask))
+            {
+                return GPIO_INVALID;
+            }
+            return HAL_GPIO_ReadPin(InputGPIOs[index].grp, InputGPIOs[index].pin) == GPIO_PIN_SET ? GPIO_STATE_HIGH : GPIO_STATE_LOW;
+        }
+    }
+
+    return GPIO_INVALID;
+}
+
+/***************************************************************************************************
+** @brief Sets the state of a given GPIO output or LED signal name (schematic reference)
+**
+** @param schRef: Schematic reference name
+** @param state: GPIO state (GPIO_STATE_LOW or GPIO_STATE_HIGH)
+**
+** @return None
+*/
+void SetGpioStateByName(const char* schRef, GpioState_t state)
+{
+    uint16_t index;
+    uint16_t hwRevMask = (1 << gHardwareRev) | HW_REV_COMMON;
+
+    if (schRef)
+    {
+        for (index = 0; index < NUM_GPIO_OUTPUTS; index++)
+        {
+            if (strcmp(OutputGPIOs[index].schRef, schRef) == 0)
+            {
+                if (!(OutputGPIOs[index].hwCompat & hwRevMask))
+                {
+                    D0_printf(G_RED"\t%s Not supported in current HW\r\n"G_NORM, schRef);
+                    return;
+                }
+                else if (state > GPIO_STATE_LOW)
+                {
+                    D0_printf("\tNew %s state: HIGH\r\n", OutputGPIOs[index].schRef);
+                    GPIO_SetHigh(index);
+                    return;
+                }
+                else
+                {
+                    D0_printf("\tNew %s state: LOW\r\n", OutputGPIOs[index].schRef);
+                    GPIO_SetLow(index);
+                    return;
+                }
+            }
+        }
+        for (index = 0; index < NUM_LEDS; index++)
+        {
+            if (strcmp(DiagLEDs[index].schRef, schRef) == 0)
+            {
+                if (!(DiagLEDs[index].hwCompat & hwRevMask))
+                {
+                    D0_printf(G_RED"\t%s Not supported in current HW\r\n"G_NORM, schRef);
+                    return;
+                }
+                else if (state > GPIO_STATE_LOW)
+                {
+                    D0_printf("\tNew %s state: ON\r\n", DiagLEDs[index].schRef);
+                    LED_On(index);
+                    return;
+                }
+                else
+                {
+                    D0_printf("\tNew %s state: OFF\r\n", DiagLEDs[index].schRef);
+                    LED_Off(index);
+                    return;
+                }
+            }
+        }
+        D0_printf("\t%s not found!\r\n", schRef);
+    }
+}
+
+/***************************************************************************************************
 ** @brief Configures the RTC (or any general purpose timer used for the purpose).
 **
 ** @param None
@@ -544,10 +721,10 @@ void RTC_Configuration( void )
 
     /* Time base configuration */
     s_hRtcTimer.Instance = RTC_TIMER;
-    __HAL_TIM_SET_COUNTER(&s_hRtcTimer, 100);
+    __HAL_TIM_SET_COUNTER(&s_hRtcTimer, RTC_INITIAL_COUNT);
     s_hRtcTimer.Init.Period = 0xFFFFFFFF;
     s_hRtcTimer.Init.Prescaler = prescalarVal;
-    s_hRtcTimer.Init.ClockDivision = 0;
+    s_hRtcTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     s_hRtcTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
     s_hRtcTimer.Init.RepetitionCounter = 0;
     s_hRtcTimer.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -589,6 +766,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
     {
         DbgUartMspInit(huart);
     }
+
+    /* Add other Uart IF MSP init calls below */
 }
 
 /***************************************************************************************************
@@ -701,6 +880,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     {
         DbgUartTxCompleteCallback(huart);
     }
+
+    /* Add handlers for other Uart IF */
 }
 
 /***************************************************************************************************

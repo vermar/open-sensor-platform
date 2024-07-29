@@ -53,6 +53,7 @@ extern AsfTaskHandle asfTaskHandleTable[];
 #ifdef DEBUG_BUILD
   char _errBuff[ERR_LOG_MSG_SZ];
 #endif
+uint8_t gHardwareRev = 0;
 
 //==================================================================================================
 //    P R I V A T E     F U N C T I O N S
@@ -238,9 +239,15 @@ void HexDump(const void* memory, uint32_t numBytes)
     }
 }
 
-/*----------------------------------------------------------------------------
-  Task 1 'ledOn': switches the LED on
- *---------------------------------------------------------------------------*/
+/***************************************************************************************************
+** @brief This example task turns On the LEDs on the board in sequential order & signals the LED Off
+**        task
+**
+**  Input:
+** (see definition for ASF_TASK_ARG)
+**
+** @return (see definition for ASF_TASK - typically void)
+*/
 ASF_TASK void LED_On_Task( void )
 {
     uint8_t ledID = 0;
@@ -254,9 +261,15 @@ ASF_TASK void LED_On_Task( void )
     }
 }
 
-/*----------------------------------------------------------------------------
-  Task 2 'ledOff': switches the LED off
- *---------------------------------------------------------------------------*/
+/***************************************************************************************************
+** @brief This example task waits for signal from LED On task and turns Off the LEDs on the board in
+**        sequential order
+**
+**  Input:
+** (see definition for ASF_TASK_ARG)
+**
+** @return (see definition for ASF_TASK - typically void)
+*/
 ASF_TASK void LED_Off_Task( void )
 {
     uint8_t ledID = 0;
@@ -279,6 +292,14 @@ ASF_TASK void LED_Off_Task( void )
 }
 
 #ifdef INCLUDE_TEST_TASK
+/***************************************************************************************************
+** @brief This example task is used for testing the system tick timing & RTC timing
+**
+**  Input:
+** (see definition for ASF_TASK_ARG)
+**
+** @return (see definition for ASF_TASK - typically void)
+*/
 ASF_TASK void LED_Test_Task( void )
 {
     uint32_t counter = 0;
