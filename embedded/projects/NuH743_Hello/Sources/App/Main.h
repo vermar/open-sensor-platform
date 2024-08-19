@@ -155,6 +155,12 @@ extern "C"
         ASFKillTimer(pTimer);           \
     }
 
+/* Bit operations */
+#define M_SetBit(byte, bitNum)          (byte | (1 << bitNum))
+#define M_ClearBit(byte, bitNum)        (byte & ~(1 << bitNum))
+#define M_IsBitSet(byte, bitNum)        ((byte >> bitNum) & 1)
+#define M_Bit(pos)                      ((uint32_t)(1 << (pos)))
+
 //==================================================================================================
 //    T Y P E   D E F I N I T I O N S
 //==================================================================================================

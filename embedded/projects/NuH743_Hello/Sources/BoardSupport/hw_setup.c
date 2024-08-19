@@ -885,6 +885,110 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 }
 
 /***************************************************************************************************
+** @brief Configures the GPIOs and H/W interface for the I2C bus
+**
+** Each I2C interface peripheral needs to define the corresponding HW setup function for GPIO and
+** interrupt assignments. Call this before calling the I2C Driver function for initialization.
+**
+** @param None
+**
+** @return None
+*/
+void I2C_IF1_HardwareSetup(void)
+{
+    GPIO_InitTypeDef  GPIO_InitStructure;
+    HAL_StatusTypeDef ret;
+    RCC_PeriphCLKInitTypeDef rccInit;
+
+    /* Configure the I2C clock source. */
+    rccInit.PeriphClockSelection = RCC_Periph_I2C_IF1_BUS;
+    I2C_IF1_RCC_SELECTION = RCC_I2C_IF1_CLKSOURCE;
+    ret = HAL_RCCEx_PeriphCLKConfig(&rccInit);
+    ASF_assert(ret == HAL_OK);
+
+    /* Enable Clocks for GPIOs used */
+    I2C_IF1_GPIO_CLK_ENABLE();
+
+    /* GPIO Configuration for CLK and SDA signals */
+    GPIO_InitStructure.Pin = I2C_IF1_BUS_CLK_PIN | I2C_IF1_BUS_SDA_PIN;
+    GPIO_InitStructure.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStructure.Pull = GPIO_NOPULL;
+    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStructure.Alternate = I2C_IF1_SCL_SDA_AF;
+    HAL_GPIO_Init(I2C_IF1_BUS_GPIO_GRP, &GPIO_InitStructure);
+
+    /* Enable I2C Peripheral clock */
+    I2C_IF1_CLK_ENABLE();
+
+    /* Force the I2C peripheral clock reset */
+    I2C_IF1_FORCE_RESET();
+
+    /* Release the I2C peripheral clock reset */
+    I2C_IF1_RELEASE_RESET();
+
+    /* NVIC/Interrupt config */
+    /* Enable and set I2Cx Event Interrupt priority */
+    HAL_NVIC_SetPriority(I2C_IF1_BUS_EVENT_IRQ_CH, I2C_IF_BUS_INT_PREEMPT_PRIORITY, I2C_IF_BUS_EVENT_INT_SUB_PRIORITY);
+    HAL_NVIC_EnableIRQ(I2C_IF1_BUS_EVENT_IRQ_CH);
+
+    /* Enable and set I2Cx Error Interrupt priority */
+    HAL_NVIC_SetPriority(I2C_IF1_BUS_ERROR_IRQ_CH, I2C_IF_BUS_INT_PREEMPT_PRIORITY, I2C_IF_BUS_ERROR_INT_SUB_PRIORITY);
+    HAL_NVIC_EnableIRQ(I2C_IF1_BUS_ERROR_IRQ_CH);
+}
+
+/***************************************************************************************************
+** @brief Configures the GPIOs and H/W interface for the I2C bus
+**
+** Each I2C interface peripheral needs to define the corresponding HW setup function for GPIO and
+** interrupt assignments. Call this before calling the I2C Driver function for initialization.
+**
+** @param None
+**
+** @return None
+*/
+void I2C_IF2_HardwareSetup(void)
+{
+    GPIO_InitTypeDef  GPIO_InitStructure;
+    HAL_StatusTypeDef ret;
+    RCC_PeriphCLKInitTypeDef rccInit;
+
+    /* Configure the I2C clock source. */
+    rccInit.PeriphClockSelection = RCC_Periph_I2C_IF2_BUS;
+    I2C_IF2_RCC_SELECTION = RCC_I2C_IF2_CLKSOURCE;
+    ret = HAL_RCCEx_PeriphCLKConfig(&rccInit);
+    ASF_assert(ret == HAL_OK);
+
+    /* Enable Clocks for GPIOs used */
+    I2C_IF2_GPIO_CLK_ENABLE();
+
+    /* GPIO Configuration for CLK and SDA signals */
+    GPIO_InitStructure.Pin = I2C_IF2_BUS_CLK_PIN | I2C_IF2_BUS_SDA_PIN;
+    GPIO_InitStructure.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStructure.Pull = GPIO_NOPULL;
+    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStructure.Alternate = I2C_IF2_SCL_SDA_AF;
+    HAL_GPIO_Init(I2C_IF2_BUS_GPIO_GRP, &GPIO_InitStructure);
+
+    /* Enable I2C Peripheral clock */
+    I2C_IF2_CLK_ENABLE();
+
+    /* Force the I2C peripheral clock reset */
+    I2C_IF2_FORCE_RESET();
+
+    /* Release the I2C peripheral clock reset */
+    I2C_IF2_RELEASE_RESET();
+
+    /* NVIC/Interrupt config */
+    /* Enable and set I2Cx Event Interrupt priority */
+    HAL_NVIC_SetPriority(I2C_IF2_BUS_EVENT_IRQ_CH, I2C_IF_BUS_INT_PREEMPT_PRIORITY, I2C_IF_BUS_EVENT_INT_SUB_PRIORITY);
+    HAL_NVIC_EnableIRQ(I2C_IF2_BUS_EVENT_IRQ_CH);
+
+    /* Enable and set I2Cx Error Interrupt priority */
+    HAL_NVIC_SetPriority(I2C_IF2_BUS_ERROR_IRQ_CH, I2C_IF_BUS_INT_PREEMPT_PRIORITY, I2C_IF_BUS_ERROR_INT_SUB_PRIORITY);
+    HAL_NVIC_EnableIRQ(I2C_IF2_BUS_ERROR_IRQ_CH);
+}
+
+/***************************************************************************************************
  ** @brief Configure the MPU attributes for Ethernet buffers and descriptors
  **
  ** @param None

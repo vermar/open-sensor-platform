@@ -17,6 +17,7 @@
 #include "common.h"
 #include <string.h>
 #include "FWVersion.h"
+#include "I2C_CmnDriver.h"
 
 //==================================================================================================
 //    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
@@ -34,6 +35,8 @@
 //==================================================================================================
 //    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
 //==================================================================================================
+static I2CDriverHandle_t s_hI2C_ChX_100K;
+static I2CDriverHandle_t s_hI2C_ChY_100K;
 
 //==================================================================================================
 //    F O R W A R D   F U N C T I O N   D E C L A R A T I O N S
@@ -46,6 +49,40 @@
 //==================================================================================================
 //    P R I V A T E     F U N C T I O N S
 //==================================================================================================
+
+/***************************************************************************************************
+** @brief Initialize the I2C Interface for channel X (I2C IF1)
+**
+** @param  None
+**
+** @return None
+*/
+static void initI2CInterfaceChX(void)
+{
+    /* Init IF HW IO pins */
+    I2C_IF1_HardwareSetup();
+
+    /* Init I2C Master interface */
+    s_hI2C_ChX_100K = I2C_Master_Initialise(I2C_IF1_BUS, I2C_BUS_CLOCK_400K, THIS_TASK_ID);
+    ASF_assert(s_hI2C_ChX_100K != NULL);
+}
+
+/***************************************************************************************************
+** @brief Initialize the I2C Interface for channel Y (I2C IF2)
+**
+** @param  None
+**
+** @return None
+*/
+static void initI2CInterfaceChY(void)
+{
+    /* Init IF HW IO pins */
+    I2C_IF2_HardwareSetup();
+
+    /* Init I2C Master interface */
+    s_hI2C_ChY_100K = I2C_Master_Initialise(I2C_IF2_BUS, I2C_BUS_CLOCK_400K, THIS_TASK_ID);
+    ASF_assert(s_hI2C_ChY_100K != NULL);
+}
 
 //==================================================================================================
 //    P U B L I C     F U N C T I O N S
@@ -62,6 +99,9 @@
 ASF_TASK void FactoryModeTask(ASF_TASK_ARG)
 {
     MessageBuffer* rcvMsg = NULLP;
+
+    initI2CInterfaceChX();
+    initI2CInterfaceChY();
 
     D0_printf("### %s Running ###\r\n", __MODULE__);
 
@@ -102,7 +142,7 @@ ASF_TASK void FactoryModeTask(ASF_TASK_ARG)
                             }
                             else
                             {
-                                D0_printf("\tInvalid GPIO name\r\n");
+                                D0_printf(G_RED "\tInvalid GPIO name\r\n" G_NORM);
                             }
                         }
                         break;
@@ -110,7 +150,7 @@ ASF_TASK void FactoryModeTask(ASF_TASK_ARG)
                     case 'S':
                         if (strcmp(szBuffer, "ALL") == 0)
                         {
-                            D0_printf("\tInvalid 'Set' option. Cannot be 'ALL'\r\n");
+                            D0_printf(G_RED "\tInvalid 'Set' option. Cannot be 'ALL'\r\n" G_NORM);
                         }
                         else if (numSc == 3)
                         {
@@ -118,17 +158,70 @@ ASF_TASK void FactoryModeTask(ASF_TASK_ARG)
                         }
                         else
                         {
-                            D0_printf("\tInvalid params (%c), (%s), (%d)\r\n", opt, szBuffer, val);
+                            D0_printf(G_RED "\tInvalid params (%c), (%s), (%d)\r\n" G_NORM, opt, szBuffer, val);
                         }
                         break;
 
                     default:
-                        D0_printf("\tInvalid option. Expected 'G' for Get & 'S' for Set\r\n");
+                        D0_printf(G_RED "\tInvalid option. Expected 'G' for Get & 'S' for Set\r\n" G_NORM);
                         break;
                     }
                 }
                 break;
             }
+
+            case 'i': /* I2C Scan */
+                if ((rcvMsg->msg.msgCliCmd.u.value[1] <= 0x7F) && (rcvMsg->msg.msgCliCmd.u.value[2] <= 0x7F))
+                {
+                    I2CDriverHandle_t* phI2C;
+                    if (rcvMsg->msg.msgCliCmd.u.value[0] == 0)
+                    {
+                        phI2C = &s_hI2C_ChX_100K;
+                        D0_printf(G_BLUE "Scanning Ch-X I2C Addresses: 0x%02X through 0x%02X\r\n" G_NORM, rcvMsg->msg.msgCliCmd.u.value[1], rcvMsg->msg.msgCliCmd.u.value[2]);
+                    }
+                    else if (rcvMsg->msg.msgCliCmd.u.value[0] == 1)
+                    {
+                        phI2C = &s_hI2C_ChY_100K;
+                        D0_printf(G_BLUE "Scanning Ch-Y I2C Addresses: 0x%02X through 0x%02X\r\n" G_NORM, rcvMsg->msg.msgCliCmd.u.value[1], rcvMsg->msg.msgCliCmd.u.value[2]);
+                    }
+                    else
+                    {
+                        D0_printf(G_RED "Wrong I2C interface value. Try again!\r\n" G_NORM);
+                        break;
+                    }
+
+                    #define CHARS_PER_LINE  DPRINTF_BUFF_SIZE
+                    uint8_t devCnt = 0;
+                    char buffer[CHARS_PER_LINE];
+                    uint32_t n = 0;
+
+                    for (uint8_t addr = rcvMsg->msg.msgCliCmd.u.value[1]; addr <= rcvMsg->msg.msgCliCmd.u.value[2]; addr++)
+                    {
+                        if (I2C_Ping_Device(*phI2C, addr))
+                        {
+                            n += snprintf(&buffer[n], (CHARS_PER_LINE - n), G_MAGENTA_BOLD "%02X " G_NORM, addr);
+                            //D0_printf(G_BLUE_BOLD "%02X - " G_NORM, addr);
+                        }
+                        else
+                        {
+                            n += snprintf(&buffer[n], (CHARS_PER_LINE - n), "xx ");
+                            //D0_printf(G_CYAN "XX - " G_NORM);
+                        }
+
+                        if (++devCnt % 16 == 0)
+                        {
+                            D0_printf("%s\r\n", buffer);
+                            n = 0;
+                        }
+                    }
+                    D0_printf("%s\r\n", buffer);
+                    D0_printf(G_GREEN ":Done:\r\n" G_NORM);
+                }
+                else
+                {
+                    D0_printf(G_BLUE "I2C Address Scan: <I2C I/F {0|1}>,<Start-7bit-Addr>,<End-7bit-Addr>\r\n" G_NORM);
+                }
+                break;
 
             case 'R':   //HW Revision Check
                 D0_printf(G_BLUE"%s HW REV %u Detected\r\n"G_NORM, THIS_BOARD, gHardwareRev);

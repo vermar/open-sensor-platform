@@ -228,8 +228,65 @@ enum _Leds {
 /* ########################################################################## */
 /* #    I 2 C   I N T E R F A C E S                                         # */
 /* ########################################################################## */
+#define NUM_I2C_INTERFACES                      2   //Number of I2C interfaces used on the board
+#define NUM_I2C_CLIENTS                         2   //Total clients for all I2C interfaces
+#define I2C_BUS_CLOCK_400K                      400000  //Fast mode
+#define I2C_BUS_CLOCK_100K                      100000  //Standard mode
 
-/* **** NOT PRESENT **** */
+/* I2C Master interface defines for I2C Driver */
+/* Channel X interface */
+#define I2C_IF1_BUS                             I2C1
+#define RCC_Periph_I2C_IF1_BUS                  RCC_PERIPHCLK_I2C1
+#define RCC_I2C_IF1_CLKSOURCE                   RCC_I2C123CLKSOURCE_D2PCLK1
+#define I2C_IF1_RCC_SELECTION                   rccInit.I2c123ClockSelection
+#define I2C_IF1_CLK_ENABLE()                    __HAL_RCC_I2C1_CLK_ENABLE()
+#define I2C_IF1_FORCE_RESET()                   __HAL_RCC_I2C1_FORCE_RESET()
+#define I2C_IF1_RELEASE_RESET()                 __HAL_RCC_I2C1_RELEASE_RESET()
+
+/* I2C TIMING Register define when I2C clock source is PCLK1 */
+/* I2C TIMING is calculated in case of the I2C Clock source is the PCLK1 = 120 MHz, I2C baud 400K */
+/* 400K, 100ns Rise, 100ns Fall */
+#define I2C_IF1_TIMING_400K                     0x10B21F61  //Note: As provided by CubeMX/CubeIDE tool
+/* 100K, 100ns Rise, 100ns Fall */
+#define I2C_IF1_TIMING_100K                     0x30A175AB  //Note: As provided by CubeMX/CubeIDE tool
+
+/* BUS-IO Pins */
+#define I2C_IF1_BUS_GPIO_GRP                    GPIOB
+#define I2C_IF1_BUS_CLK_PIN                     GPIO_PIN_8
+#define I2C_IF1_BUS_SDA_PIN                     GPIO_PIN_9
+#define I2C_IF1_SCL_SDA_AF                      GPIO_AF4_I2C1
+#define I2C_IF1_GPIO_CLK_ENABLE()               __HAL_RCC_GPIOB_CLK_ENABLE()
+
+/* Interrupt Channel assignments */
+#define I2C_IF1_BUS_EVENT_IRQ_CH                I2C1_EV_IRQn
+#define I2C_IF1_BUS_ERROR_IRQ_CH                I2C1_ER_IRQn
+
+#define I2C_IF1_ISR_Handler                     I2C1_EV_IRQHandler
+#define I2C_IF1_ERR_ISR_Handler                 I2C1_ER_IRQHandler
+
+/* Second I2C interface */
+/* Channel Y interface */
+#define I2C_IF2_BUS                             I2C2
+#define RCC_Periph_I2C_IF2_BUS                  RCC_PERIPHCLK_I2C2
+#define RCC_I2C_IF2_CLKSOURCE                   RCC_I2C123CLKSOURCE_D2PCLK1
+#define I2C_IF2_RCC_SELECTION                   rccInit.I2c123ClockSelection
+#define I2C_IF2_CLK_ENABLE()                    __HAL_RCC_I2C2_CLK_ENABLE()
+#define I2C_IF2_FORCE_RESET()                   __HAL_RCC_I2C2_FORCE_RESET()
+#define I2C_IF2_RELEASE_RESET()                 __HAL_RCC_I2C2_RELEASE_RESET()
+
+/* BUS-IO Pins */
+#define I2C_IF2_BUS_GPIO_GRP                    GPIOF
+#define I2C_IF2_BUS_CLK_PIN                     GPIO_PIN_1
+#define I2C_IF2_BUS_SDA_PIN                     GPIO_PIN_0
+#define I2C_IF2_SCL_SDA_AF                      GPIO_AF4_I2C2
+#define I2C_IF2_GPIO_CLK_ENABLE()               __HAL_RCC_GPIOF_CLK_ENABLE()
+
+/* Interrupt Channel assignments */
+#define I2C_IF2_BUS_EVENT_IRQ_CH                I2C2_EV_IRQn
+#define I2C_IF2_BUS_ERROR_IRQ_CH                I2C2_ER_IRQn
+
+#define I2C_IF2_ISR_Handler                     I2C2_EV_IRQHandler
+#define I2C_IF2_ERR_ISR_Handler                 I2C2_ER_IRQHandler
 
 /* ########################################################################## */
 /* #    E X T E R N A L   I N P U T   I N T E R R U P T S                   # */
@@ -251,6 +308,14 @@ enum _Leds {
 
 #define DBG_UART_INT_PREEMPT_PRIORITY           10  // Lowest group Preemption priority
 #define DBG_UART_INT_SUB_PRIORITY               0   // Lowest Priority within group
+
+ /* I2C Driver interrupt priorities (same for all I2C interfaces) */
+ /* !!!! Note - In the past this needed to be the highest priority due to some "bug" in STM32 implementation
+  * but hopefully that's been fixed since. If I2C issues are seen (hung bus) the try making these priorities highest (0)
+  */
+#define I2C_IF_BUS_INT_PREEMPT_PRIORITY         2   // I2C IRQ, I2C TX DMA and I2C RX DMA priority
+#define I2C_IF_BUS_EVENT_INT_SUB_PRIORITY       0   // I2C EV IRQ subpriority
+#define I2C_IF_BUS_ERROR_INT_SUB_PRIORITY       0   // I2C ER IRQ subpriority
 
 /* ########################################################################## */
 /* #    M I S C E L L A N E O U S                                           # */
@@ -336,6 +401,8 @@ void DumpGpioInputStatusAll(void);
 void DumpGpioOutputStatusAll(void);
 GpioState_t GetGpioStateByName(const char* schRef);
 void SetGpioStateByName(const char* schRef, GpioState_t state);
+void I2C_IF1_HardwareSetup(void);
+void I2C_IF2_HardwareSetup(void);
 
 #endif /* HW_SETUP_NUCLEO_H743_H */
 //==================================================================================================
