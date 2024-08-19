@@ -340,7 +340,7 @@
               <MiscControls>-Wno-unused-parameter -Wno-format -Wno-sign-compare</MiscControls>
               <Define>__FPU_PRESENT=1U,__CORTEX_M4F,__CMSIS_RTOS,DEBUG_BUILD,UART_DMA_ENABLE,USE_HAL_DRIVER,STM32H743xx,NUCLEO_H743ZI_BOARD,ON_DEMAND_PROFILING,ASF_PROFILING,n_INCLUDE_TEST_TASK</Define>
               <Undefine></Undefine>
-              <IncludePath>..\Sources\App;..\Sources\Config;..\Sources\BoardSupport;..\..\..\..\include;..\..\..\common\app;..\..\..\common\asf;..\..\..\..\external\MCU\CMSIS\Include;..\..\..\..\external\RTOS\CMSIS-RTX\INC;..\..\..\..\external\RTOS\CMSIS-RTX\SRC;..\..\..\..\external\MCU\STM32H7-CM7\HAL\Inc;..\..\..\..\external\MCU\CMSIS\Device\ST\STM32H7xx\Include</IncludePath>
+              <IncludePath>..\Sources\App;..\Sources\Config;..\Sources\BoardSupport;..\..\..\..\include;..\..\..\common\app;..\..\..\common\asf;..\..\..\common\modules\bus-drivers;..\..\..\..\external\MCU\CMSIS\Include;..\..\..\..\external\RTOS\CMSIS-RTX\INC;..\..\..\..\external\RTOS\CMSIS-RTX\SRC;..\..\..\..\external\MCU\STM32H7-CM7\HAL\Inc;..\..\..\..\external\MCU\CMSIS\Device\ST\STM32H7xx\Include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -463,6 +463,16 @@
               <FileName>stm32h7xx_hal_uart_ex.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\..\external\MCU\STM32H7-CM7\HAL\Src\stm32h7xx_hal_uart_ex.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32h7xx_hal_i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\MCU\STM32H7-CM7\HAL\Src\stm32h7xx_hal_i2c.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32h7xx_hal_i2c_ex.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\external\MCU\STM32H7-CM7\HAL\Src\stm32h7xx_hal_i2c_ex.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -653,6 +663,16 @@
               <FileName>system_stm32h7xx.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Sources\BoardSupport\system_stm32h7xx.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Bus-Drivers</GroupName>
+          <Files>
+            <File>
+              <FileName>I2C_CmnDriver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\common\modules\bus-drivers\STM32H7-CM7\I2C_CmnDriver.c</FilePath>
             </File>
           </Files>
         </Group>
