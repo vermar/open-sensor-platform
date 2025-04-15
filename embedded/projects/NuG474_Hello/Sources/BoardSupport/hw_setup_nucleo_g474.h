@@ -108,7 +108,7 @@ enum _Leds {
 /* ########################################################################## */
 /** UART configuration */
 /* Definition for USARTx clock resources */
-#define DBG_UART_BAUD                           115200
+#define DBG_UART_BAUD                           921600
 
 /* Note: On Nucleo Board USART1 (PA2, PA3) is connected to STLINK for debug output via USB */
 #define DBG_IF_UART                             USART1
