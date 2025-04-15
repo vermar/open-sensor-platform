@@ -39,7 +39,7 @@ extern AsfTaskHandle asfTaskHandleTable[];
 /*-------------------------------------------------------------------------------------------------*\
  |    P R I V A T E   C O N S T A N T S   &   M A C R O S
 \*-------------------------------------------------------------------------------------------------*/
-#define I2C_WAIT_TIMEOUT                      20 //ms
+#define I2C_WAIT_TIMEOUT                      120 //ms
 #define I2C_TXRX_STATUS_ACTIVE                0
 #define I2C_TXRX_STATUS_PASSED                1
 #define I2C_TXRX_STATUS_FAILED                2
@@ -60,27 +60,13 @@ extern AsfTaskHandle asfTaskHandleTable[];
 #define CR1_ACK_Reset                         ((uint16_t)0xFBFF)
 
 
-/* SR2 register flags  */
-#define I2C_STATUS_BIT_DUALF                  (0x0080)
-#define I2C_STATUS_BIT_SMBHOST                (0x0040)
-#define I2C_STATUS_BIT_SMBDEFAULT             (0x0020)
-#define I2C_STATUS_BIT_GENCALL                (0x0010)
-#define I2C_STATUS_BIT_TRA                    (0x0004)
-#define I2C_STATUS_BIT_BUSY                   (0x0002)
-#define I2C_STATUS_BIT_MASTER                 (0x0001)
-
 /* SR1 register flags */
-#define I2C_STATUS_BIT_SMBALERT               (0x8000)
-#define I2C_STATUS_BIT_TIMEOUT                (0x4000)
-#define I2C_STATUS_BIT_PECERR                 (0x1000)
 #define I2C_STATUS_BIT_OVR                    (0x0800)
 #define I2C_STATUS_BIT_AF                     (0x0400)
 #define I2C_STATUS_BIT_ARLO                   (0x0200)
 #define I2C_STATUS_BIT_BERR                   (0x0100)
 #define I2C_STATUS_BIT_TXE                    (0x0080)
 #define I2C_STATUS_BIT_RXNE                   (0x0040)
-#define I2C_STATUS_BIT_STOPF                  (0x0010)
-#define I2C_STATUS_BIT_ADD10                  (0x0008)
 #define I2C_STATUS_BIT_BTF                    (0x0004)
 #define I2C_STATUS_BIT_ADDR                   (0x0002)
 #define I2C_STATUS_BIT_SB                     (0x0001)
@@ -564,20 +550,17 @@ void I2C_Driver_ERR_ISR_Handler(void)
     if ((SR1Register & I2C_MASK_ARLO) == I2C_STATUS_BIT_ARLO)
     {
         _I2cHandle.Instance->SR1 &= (~I2C_STATUS_BIT_ARLO);
-        SR1Register = 0;
     }
     /* If BERR = 1 */
     if ((SR1Register & I2C_MASK_BERR) == I2C_STATUS_BIT_BERR)
     {
         _I2cHandle.Instance->SR1 &= (~I2C_STATUS_BIT_BERR);
-        SR1Register = 0;
     }
 
     /* If OVR = 1 */
     if ((SR1Register & I2C_MASK_OVR) == I2C_STATUS_BIT_OVR)
     {
         _I2cHandle.Instance->SR1 &= (~I2C_STATUS_BIT_OVR);
-        SR1Register = 0;
     }
 #ifdef __CMSIS_RTOS
     osSignalSet( asfTaskHandleTable[I2C_DRIVER_TASK].handle, signal );
