@@ -1,0 +1,87 @@
+/* OSP Hello World Project
+ * https://github.com/vermar/open-sensor-platform
+ *
+ * Copyright (C) 2024 Rajiv Verma
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+//==================================================================================================
+//    I N C L U D E   F I L E S
+//==================================================================================================
+#include "common.h"
+#include "asf_taskstruct.h"
+
+//==================================================================================================
+//    E X T E R N A L   V A R I A B L E S   &   F U N C T I O N S
+//==================================================================================================
+extern AsfTaskHandle asfTaskHandleTable[NUMBER_OF_TASKS];
+
+//==================================================================================================
+//    P R I V A T E   C O N S T A N T S   &   M A C R O S
+//==================================================================================================
+
+//==================================================================================================
+//    P R I V A T E   T Y P E   D E F I N I T I O N S
+//==================================================================================================
+
+//==================================================================================================
+//    S T A T I C   V A R I A B L E S   D E F I N I T I O N S
+//==================================================================================================
+/* These are the tasks that will be created on startup. This list allows you to disable creation of
+ * one or more tasks in the system if so desired. Allows to have a different run modes with different
+ * task selection list */
+static const uint8_t NormalModeTaskList[] = {
+    INSTR_MANAGER_TASK_ID,
+    CMD_HNDLR_TASK_ID,
+    LED_ON_TASK_ID,
+    LED_OFF_TASK_ID,
+#ifdef INCLUDE_TEST_TASK
+    TEST_TASK_ID
+#endif
+};
+static const uint8_t NormalModeTaskListSize = sizeof(NormalModeTaskList);
+
+//==================================================================================================
+//    F O R W A R D   F U N C T I O N   D E C L A R A T I O N S
+//==================================================================================================
+
+//==================================================================================================
+//    P U B L I C   V A R I A B L E S   D E F I N I T I O N S
+//==================================================================================================
+
+//==================================================================================================
+//    P R I V A T E     F U N C T I O N S
+//==================================================================================================
+
+//==================================================================================================
+//    P U B L I C     F U N C T I O N S
+//==================================================================================================
+
+/***************************************************************************************************
+** @brief  Returns info on "normal" application mode task list table and size
+**
+** @param  pTaskList: return pointer to task list
+**
+** @retval Task count
+*/
+uint8_t GetTaskList( uint8_t **pTaskList )
+{
+    *pTaskList = (uint8_t*)NormalModeTaskList;
+    return NormalModeTaskListSize;
+}
+
+
+
+//==================================================================================================
+//    E N D   O F   F I L E
+//==================================================================================================
